@@ -1,5 +1,7 @@
+{% if zookeeper_auth_type == 'gssapi' %}
+{% if zookeeper_auth_client_enabled %}
 Client {
-    com.sun.security.auth.module.Krb5LoginModule required 
+    com.sun.security.auth.module.Krb5LoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }} 
     debug={{ zookeeper_jaas_debug }}
     useKeyTab=true
     storeKey=true
@@ -9,7 +11,7 @@ Client {
 };
 
 Server {
-    com.sun.security.auth.module.Krb5LoginModule required 
+    com.sun.security.auth.module.Krb5LoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }} 
     debug={{ zookeeper_jaas_debug }}
     useKeyTab=true
     storeKey=true
@@ -17,9 +19,10 @@ Server {
     keyTab="{{ zookeeper_kerberos_keytab_location }}"
     principal="{{ zookeeper_kerberos_principal }}";
 };
-
+{% endif %}
+{% if zookeeper_auth_quorum_enabled %}
 QuorumServer {
-    com.sun.security.auth.module.Krb5LoginModule required 
+    com.sun.security.auth.module.Krb5LoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }} 
     debug={{ zookeeper_jaas_debug }}
     useKeyTab=true
     storeKey=true
@@ -28,10 +31,40 @@ QuorumServer {
 };
 
 QuorumLearner {
-    com.sun.security.auth.module.Krb5LoginModule required 
+    com.sun.security.auth.module.Krb5LoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }} 
     debug={{ zookeeper_jaas_debug }}
     useKeyTab=true
     storeKey=true
     keyTab="{{ zookeeper_kerberos_keytab_location }}"
     principal="{{ zookeeper_kerberos_principal }}";
 };
+{% endif %}
+{% elif zookeeper_auth_type == 'digest' %}
+{% if zookeeper_auth_client_enabled %}
+Server {
+    org.apache.zookeeper.server.auth.DigestLoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }}
+    user_{{ zookeeper_auth_users_kafka_username }}="{{ zookeeper_auth_users_kafka_password }}";
+};
+{% endif %}
+
+{% if zookeeper_auth_quorum_enabled %}
+QuorumServer {
+       org.apache.zookeeper.server.auth.DigestLoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }}
+       user_{{ zookeeper_auth_users_quorum_username }}="{{ zookeeper_auth_users_quorum_password }}";
+};
+
+QuorumLearner {
+       org.apache.zookeeper.server.auth.DigestLoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }}
+       username="{{ zookeeper_auth_users_quorum_username }}"
+       password="{{ zookeeper_auth_users_quorum_password }}";
+};
+{% endif %}
+{% endif %}
+
+
+
+
+
+
+
+

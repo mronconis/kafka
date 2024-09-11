@@ -36,6 +36,5 @@
     group: "{{ zookeeper_group }}"
     mode: 0400
   when:
-    - zookeeper_auth_type is defined 
-    - zookeeper_auth_type in 'gssapi'
+    - zookeeper_auth_type is defined
   become: true

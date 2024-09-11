@@ -1,3 +1,6 @@
+
+{% if zookeeper_auth_type =='gssapi' %}
+{% if zookeeper_auth_client_enabled%}
 Client {
     com.sun.security.auth.module.Krb5LoginModule required 
     debug={{ kafka_jaas_debug }}
@@ -6,3 +9,11 @@ Client {
     keyTab="{{ kafka_kerberos_keytab_location }}"
     principal="kafka/{{ inventory_hostname }}@EXAMPLE.REDHAT.COM";
 };
+{% endif %}
+{% elif zookeeper_auth_type =='digest' %}
+Client {
+    org.apache.kafka.common.security.plain.PlainLoginModule {{ zookeeper_auth_required | ternary('required', 'optional') }}
+    username="{{ zookeeper_auth_users_kafka_username }}"
+    password="{{ zookeeper_auth_users_kafka_password }}";
+};
+{% endif %}
