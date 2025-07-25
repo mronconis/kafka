@@ -16,8 +16,14 @@
       "machine1",
       "machine2",
       "machine3",
+      "machine4",
+      "machine5",
+      "machine6",
       "machine1.molecule",
       "machine2.molecule",
-      "machine3.molecule"
+      "machine3.molecule",
+      "machine4.molecule",
+      "machine5.molecule",
+      "machine6.molecule"
    ]
 }

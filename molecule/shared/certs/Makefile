@@ -1,6 +1,7 @@
 all: cert-admin.p12 cert-cluster.p12
 
 clean:
+	rm *.crt
 	rm *.pem
 	rm *.csr
 	rm *.p12
