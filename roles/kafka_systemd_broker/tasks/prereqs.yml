@@ -1,10 +1,27 @@
 ---
-- name: Check role parameters
-  ansible.builtin.assert:
-    that:
-      - kafka_home is defined
-      - kafka_broker_id is defined
-    quiet: true
+
+- name:  Check role parameters
+  block:
+    - name: "Kafka Zookeeper mode"
+      ansible.builtin.assert:
+        that:
+          - kafka_broker_id is defined
+        quiet: true
+      when:
+        - not kafka_kraft_mode
+
+    - name: "Kafka KRaft mode"
+      ansible.builtin.assert:
+        that:
+          - kafka_node_id is defined
+          - kafka_cluster_id is defined
+        quiet: true
+      when:
+        - kafka_kraft_mode
+
+- name: Debug config
+  ansible.builtin.debug:
+    var: __kafka_input_config
 
 - name: Build kafka config
   saiello.kafka.kafka_config:
@@ -16,7 +33,6 @@
 - name: Debug Admin Kafka config
   ansible.builtin.debug: var=__admin_config
 
-
 - name: Check kafka_inter_broker_listener_name is valid
   ansible.builtin.assert:
     that:
@@ -26,6 +42,8 @@
       kafka_inter_broker_listener_name is undefined or not valid. 
       Allowed values are: {{ __kafka_config.listeners.values() }}
     quiet: true
+  when: (not kafka_kraft_mode) or 
+        (kafka_kraft_mode and kafka_broker_servers_ansible_group in group_names)
 
 - name: Initialize kafka_java_opts
   ansible.builtin.set_fact:

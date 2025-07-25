@@ -1,7 +1,7 @@
 ---
 namespace: saiello
 name: kafka
-version: 0.0.7
+version: 0.0.8
 readme: README.md
 authors:
   - Simone Aiello <saiello@redhat.com>
@@ -13,8 +13,9 @@ tags:
   - zookeeper
   - streams
   - amq
+  - kraft
 dependencies:
-  middleware_automation.redhat_csp_download: ">=1.1.2"
+  middleware_automation.redhat_csp_download: ">=1.2.2"
 repository: https://github.com/saiello/kafka
 documentation: https://github.com/saiello/kafka
 homepage: https://github.com/saiello/kafka

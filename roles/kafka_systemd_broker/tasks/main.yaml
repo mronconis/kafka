@@ -23,18 +23,27 @@
 - name: Ensure Admin 
   ansible.builtin.include_tasks: setup_admin.yml
 
+- name: Set KRaft Facts
+  ansible.builtin.include_tasks: set_kraft_facts.yml
+  when: 
+  - kafka_kraft_mode
+
 - name: Set Zookeeper Facts
   ansible.builtin.include_role:
     name: kafka_systemd_zookeeper
     tasks_from: set_zk_facts.yml
   vars:
     zookeeper_servers_ansible_group: "{{ kafka_zookeeper_servers_ansible_group }}"
-
+  when: 
+  - not kafka_kraft_mode
+  
 - name: Check Zookeeper Facts are set
   ansible.builtin.assert:
     that:
       - zookeeper_servers is defined
     quiet: yes
+  when: 
+  - not kafka_kraft_mode
 
 - name: Set Zookeeper Connect Servers Fact
   ansible.builtin.set_fact:
@@ -44,12 +53,16 @@
         zip(zookeeper_servers | map(attribute='client_port')) |
         map('join', ':')
       }}
+  when: 
+  - not kafka_kraft_mode
 
 - name: Debug Kakfa Java Ops
   ansible.builtin.debug: var=kafka_java_opts
 
 - name: Debug Kafka zookeeper.connect.servers
   ansible.builtin.debug: var=kafka_zookeeper_connect_servers
+  when: 
+  - not kafka_kraft_mode
 
 - name: Setup security resources
   ansible.builtin.include_tasks: setup_security.yml
@@ -77,7 +90,7 @@
   notify: Restart kafka
   become: true
 
-- name: Create server.properties configuration file
+- name: Create {{ kafka_server_properties_file_name }} configuration file
   ansible.builtin.template:
     src: "{{ kafka_server_properties_template }}"
     dest: "{{ kafka_server_properties_file }}"
@@ -87,6 +100,12 @@
     backup: "{{ kafka_template_backup }}"
   notify: Restart kafka
   become: true
+
+- name: Ensure storage is formatted 
+  ansible.builtin.include_tasks: setup_storage.yml
+  when: 
+  - kafka_kraft_mode
+  - not(kafka_skip_setup_storage | bool)
 
 # ---------------------------
 # Enable Kafka Service

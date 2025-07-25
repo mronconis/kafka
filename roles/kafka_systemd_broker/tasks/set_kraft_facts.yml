@@ -1,0 +1,19 @@
+---
+- name: Gather KRaft facts
+  ansible.builtin.setup:
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
+
+- name: Init KRaft controller facts
+  ansible.builtin.set_fact:
+    controller_quorum_bootstrap_servers: []
+
+- name: Set KRaft controller quorum facts
+  ansible.builtin.set_fact:
+    controller_quorum_bootstrap_servers: "{{ controller_quorum_bootstrap_servers + [ hostvars[item]['ansible_facts']['fqdn'] + ':' + '9090' ] }}"
+  with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
+
+- name: Debug KRaft controller quorum
+  ansible.builtin.debug:
+    var: controller_quorum_bootstrap_servers

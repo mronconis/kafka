@@ -6,8 +6,39 @@
     owner: "{{ kafka_user }}"
     group: "{{ kafka_group }}"
     mode: 0400
-  when: 
+  when:
     - __admin_config.require_command_config is defined
     - __admin_config.require_command_config
   become: true
-    
+
+- name: Create security dir for Kafka
+  ansible.builtin.file:
+    path: "{{ kafka_home }}/security"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: 0755
+  when:
+    - kafka_admin.tls
+  become: true
+
+- name: Copy admin SSL resources
+  block:
+    - name: Copy java truststore file
+      ansible.builtin.copy:
+        src: "{{ kafka_admin.tls.trustedCA.file }}"
+        dest: "{{ kafka_admin.tls.trustedCA.location }}"
+        owner: "{{ kafka_user }}"
+        group: "{{ kafka_group }}"
+        mode: 0400
+
+    - name: Copy java keystore file
+      ansible.builtin.copy:
+        src: "{{ kafka_admin.tls.keystore.file }}"
+        dest: "{{ kafka_admin.tls.keystore.location }}"
+        owner: "{{ kafka_user }}"
+        group: "{{ kafka_group }}"
+        mode: 0400
+  when:
+    - kafka_admin.tls is defined
+  become: true
