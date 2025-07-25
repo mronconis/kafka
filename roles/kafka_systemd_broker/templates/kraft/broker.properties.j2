@@ -2,7 +2,7 @@
 
 node.id={{ kafka_node_id }}
 
-process.roles={{ group_names | join(',') }}
+process.roles={{ kafka_kraft_roles | join(',') }}
 
 listener.security.protocol.map={{ __kafka_config.core['listener.security.protocol.map'] }}
 listeners={{ __kafka_config.core['listeners'] }}

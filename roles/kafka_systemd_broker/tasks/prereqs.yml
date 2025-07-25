@@ -42,8 +42,8 @@
       kafka_inter_broker_listener_name is undefined or not valid. 
       Allowed values are: {{ __kafka_config.listeners.values() }}
     quiet: true
-  when: (not (kafka_kraft_mode | default(false))) or 
-        (kafka_kraft_mode | default(false) and kafka_broker_servers_ansible_group in group_names)
+  when: (not kafka_kraft_mode) or 
+        (kafka_kraft_mode and kafka_broker_servers_ansible_group in group_names)
 
 - name: Initialize kafka_java_opts
   ansible.builtin.set_fact:

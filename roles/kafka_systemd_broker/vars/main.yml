@@ -10,7 +10,7 @@ __kafka_input_config:
   admin: "{{ kafka_admin }}"
   kraft_mode: "{{ kafka_kraft_mode }}"
   kraft_controller_listener_name: "{{ kafka_controller_listener_name }}"
-  kraft_roles: "{{ group_names }}"
+  kraft_roles: "{{ kafka_kraft_roles }}"
 
 __kafka_admin_config: "{{ kafka_home }}/config/admin.properties"
 __kafka_storage_config: "{{ kafka_home }}/config/kraft/{{ kafka_server_properties_file_name }}"

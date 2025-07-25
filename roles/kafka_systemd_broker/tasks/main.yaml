@@ -26,7 +26,7 @@
 - name: Set KRaft Facts
   ansible.builtin.include_tasks: set_kraft_facts.yml
   when: 
-  - kafka_kraft_mode | default(false)
+  - kafka_kraft_mode
 
 - name: Set Zookeeper Facts
   ansible.builtin.include_role:
@@ -35,7 +35,7 @@
   vars:
     zookeeper_servers_ansible_group: "{{ kafka_zookeeper_servers_ansible_group }}"
   when: 
-  - not (kafka_kraft_mode | default(false))
+  - not kafka_kraft_mode
   
 - name: Check Zookeeper Facts are set
   ansible.builtin.assert:
@@ -43,7 +43,7 @@
       - zookeeper_servers is defined
     quiet: yes
   when: 
-  - not (kafka_kraft_mode | default(false))
+  - not kafka_kraft_mode
 
 - name: Set Zookeeper Connect Servers Fact
   ansible.builtin.set_fact:
@@ -54,7 +54,7 @@
         map('join', ':')
       }}
   when: 
-  - not (kafka_kraft_mode | default(false))
+  - not kafka_kraft_mode
 
 - name: Debug Kakfa Java Ops
   ansible.builtin.debug: var=kafka_java_opts
@@ -62,7 +62,7 @@
 - name: Debug Kafka zookeeper.connect.servers
   ansible.builtin.debug: var=kafka_zookeeper_connect_servers
   when: 
-  - not (kafka_kraft_mode | default(false))
+  - not kafka_kraft_mode
 
 - name: Setup security resources
   ansible.builtin.include_tasks: setup_security.yml
