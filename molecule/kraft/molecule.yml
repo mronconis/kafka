@@ -1,0 +1,212 @@
+---
+# skip prerun because I am experiencing the issue described here:
+# https://github.com/ansible/ansible-lint/issues/2070
+prerun: false
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  ansible-lint -v
+platforms:
+
+  - name: machine1
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - controller
+    networks:
+      - name: molecule
+
+  - name: machine2
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - controller
+    networks:
+      - name: molecule
+
+  - name: machine3
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - controller
+    networks:
+      - name: molecule
+
+  - name: machine4
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - broker
+    networks:
+      - name: molecule
+
+  - name: machine5
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - broker
+    networks:
+      - name: molecule
+
+  - name: machine6
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - broker
+    networks:
+      - name: molecule
+
+provisioner:
+  name: ansible
+  ansible_args:
+    - --diff
+  playbooks:
+    converge: converge.yml
+    prepare: ../shared/prepare.yml
+    verify: verify.yml
+  inventory:
+    group_vars:
+      all:
+        kafka_version: "3.9.1"
+        kafka_prereqs_setup_openjdk_package_name: java-17-openjdk
+
+        kafka_advertised_host: "{{ ansible_hostname }}"
+        #kafka_advertised_interface_name: eth0
+        
+        # kraft mode
+        kafka_kraft_mode: true
+        kafka_cluster_id: YPfyovBeRWmvbFDAzikROA
+
+        kafka_tls_config:
+          enabled: true
+          trustedCA:
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
+            location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
+          keystore:
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-cluster.p12"
+            location: "{{ kafka_home }}/security/ansible_kafka-keystore.p12"
+            password: changeit
+            type: PKCS12
+      
+      controller:
+        
+        kafka_listeners:
+
+          - name: CONTROLLER
+            port: 9090
+            tls: true 
+            authentication:
+              type: tls
+            
+        kafka_admin:
+
+        kafka_additional_conf:
+          num.partitions: 1
+          log.retention.hours: 148
+
+        kafka_server_properties_template: kraft/controller.properties.j2
+        kafka_server_properties_file_name: controller.properties
+
+        kafka_skip_verify_listening: true
+        kafka_skip_verify_under_replicated: true
+
+      broker:
+
+        kafka_authorization:
+          type: simple
+          deny_by_default: true
+          super_users:
+            - User:CN=kafka,O=Saiello,L=Rome,C=IT
+            - User:admin
+
+        kafka_listeners:
+
+          - name: CONTROLLER
+            port: 9090
+            tls: true 
+            authentication:
+              type: tls
+
+          - name: REPLICATION
+            port: 9091
+            tls: true 
+            authentication:
+              type: tls
+       
+          - name: CLIENT
+            port: 9092
+            tls: true
+            authentication:
+              type: scram-sha-512
+          
+          - name: ADMIN
+            port: 9093
+            tls: true 
+            authentication:
+              type: tls
+
+        kafka_additional_conf:
+          num.partitions: 1
+          log.retention.hours: 148
+          auto.create.topics.enable: 'false'
+          min.insync.replicas: 2
+          default.replication.factor: 3
+          offsets.topic.replication.factor: 3
+          status.storage.replication.factor: 3
+          transaction.state.log.replication.factor: 3
+          transaction.state.log.min.isr: 2
+
+        kafka_inter_broker_listener_name: REPLICATION
+        
+        kafka_admin:
+          listener_name: ADMIN
+          authentication:
+            type: tls
+          tls:
+            enabled: true
+            trustedCA:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
+              location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
+            keystore:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-cluster.p12"
+              location: "{{ kafka_home }}/security/ansible_kafka-keystore.p12"
+              password: changeit
+              type: PKCS12
+        
+        kafka_server_properties_template: kraft/broker.properties.j2
+        kafka_server_properties_file_name: broker.properties
+
+    host_vars:
+      machine1:
+        kafka_node_id: 1
+        kafka_dir_id: 1IPhBz5sQEuxBCNR15oApA
+      machine2:
+        kafka_node_id: 2
+        kafka_dir_id: ZuzSytQ3TxaD-nj3l3LY_A
+      machine3:
+        kafka_node_id: 3
+        kafka_dir_id: AZN1GcFyT7GFUc9_vyVvLg
+      machine4:
+        kafka_node_id: 4
+      machine5:
+        kafka_node_id: 5
+      machine6:
+        kafka_node_id: 6
+      localhost:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+verifier:
+  name: ansible

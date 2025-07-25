@@ -17,13 +17,25 @@ tls_config_spec = dict(
     keystore=dict(
       type='dict',
       options=dict(
+        file=dict(type='str'),
         location=dict(type='str'),
         password=dict(type='str'),
-        type=dict(type='str')
+        type=dict(
+          type='str',
+          choices=['PKCS12','JKS']
+        )
       )
     ),
     trustedCA=dict(
-      type='str'
+      type='dict',  
+      options=dict(
+        file=dict(type='str'),
+        location=dict(type='str'),
+        type=dict(
+          type='str',
+          choices=['PEM','JKS']
+        )
+      )
     )
   )
 )
@@ -89,9 +101,17 @@ argument_config_spec = dict(
       tls=tls_config_spec,
       authentication=authentication_spec
     )
+  ),
+  kraft_mode=dict(
+    type='bool'
+  ),
+  kraft_controller_listener_name=dict(
+    type='str'
+  ),
+  kraft_roles=dict(
+    type='list'
   )
 )
-
 
 argument_spec_data = dict(
     config=argument_config_spec
@@ -152,9 +172,8 @@ class KafkaConfigGenerator():
         listener['protocol'] = 'PLAINTEXT'
 
       if tls:
-        # TODO support different trustore types
-        listener['truststore_type'] = 'PEM'
-        listener['truststore_location'] = tls['trustedCA']
+        listener['truststore_location'] = tls['trustedCA']['location']
+        listener['truststore_type'] = tls['trustedCA']['type']
         # listener['truststore_password'] = 
         
         listener['keystore_location'] = tls['keystore']['location']
@@ -223,12 +242,22 @@ class KafkaConfigGenerator():
       listeners = listeners.values()
       
       config['core'] = {
-        'advertised.listeners': ','.join(['{name}://{advertised}:{port}'.format(**listener) for listener in listeners]),
-        'listeners': ','.join(['{name}://:{port}'.format(**listener) for listener in listeners]),
+        'advertised.listeners': ','.join(['{name}://{advertised}:{port}'.format(**listener) for listener in listeners if self._configure_listener(listener)]),
+        'listeners': ','.join(['{name}://:{port}'.format(**listener) for listener in listeners if self._configure_listener(listener)]),
         'listener.security.protocol.map': ','.join(['{name}:{protocol}'.format(**listener) for listener in listeners]),
       }
 
       return config
+
+  def _configure_listener(self, listener):
+    kraft_mode = self._config['kraft_mode']
+    kraft_controller_listener_name = self._config['kraft_controller_listener_name']
+    kraft_roles = self._config['kraft_roles']
+    
+    if kraft_mode and len(kraft_roles) == 1 and listener['name'] == kraft_controller_listener_name:
+      return not 'broker' in kraft_roles 
+
+    return True
 
   def get_admin_config(self, kafka_config):
     admin = self._config.pop('admin')
@@ -246,11 +275,11 @@ class KafkaConfigGenerator():
     options = {}
     
     authentication = admin.pop('authentication', {})
-    tls = authentication.pop('tls', {})
-    
+    tls = admin.pop('tls', {})
+
     if 'trustedCA' in tls:
-      options['ssl.truststore.location']=tls['trustedCA']
-      options['ssl.truststore.type']='PEM'
+      options['ssl.truststore.location']=tls['trustedCA']['location']
+      options['ssl.truststore.type']=tls['trustedCA']['type']
    
     if 'keystore' in tls:
       options['ssl.keystore.location']=tls['keystore']['location']
@@ -259,8 +288,6 @@ class KafkaConfigGenerator():
 
     authentication_type = authentication.pop('type', '-')
     authentication_config = authentication.pop('config', {})
-
-    
 
     if authentication_type == 'plain':
       jaas_login_module_args = ' '.join(['{}="{}"'.rjust(9, ' ')
@@ -282,6 +309,7 @@ class KafkaConfigGenerator():
       jaas_login_module_args = ' '.join(['{}="{}"'.rjust(9, ' ')
         .format(k, v) for k, v in authentication_config.items()])
       options['sasl.jaas.config']='org.apache.kafka.common.security.scram.ScramLoginModule required {};'.format(jaas_login_module_args)
+
     
     # TODO check options according to protocol 
 

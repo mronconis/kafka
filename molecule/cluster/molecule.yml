@@ -55,7 +55,7 @@ provisioner:
   inventory:
     group_vars:
       all:
-        kafka_home: /opt/kafka/kafka_2.13-3.1.1
+        #kafka_home: /opt/kafka/kafka_2.13-3.1.1
         kafka_advertised_interface_name: eth0
         zookeeper_interface_name: eth0
       
@@ -69,13 +69,26 @@ provisioner:
             - User:CN=kafka,O=Saiello,L=Rome,C=IT
             - User:CN=admin,O=Saiello,L=Rome,C=IT
 
+        certs_source_base: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/molecule/shared/certs"
+
         kafka_tls_config:
           enabled: true
-          trustedCA: /etc/certs/ca-root.pem
+          trustedCA:
+            file: "{{ certs_source_base }}/ca-root.pem"
+            location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
           keystore:
-            location: /etc/certs/cert-cluster.p12
+            file: "{{ certs_source_base }}/cert-cluster.p12"
+            location: "{{ kafka_home }}/security/ansible_kafka-keystore.p12"
             password: changeit
             type: PKCS12
+
+        # kafka_tls_config:
+        #   enabled: true
+        #   trustedCA: /etc/certs/ca-root.pem
+        #   keystore:
+        #     location: /etc/certs/cert-cluster.p12
+        #     password: changeit
+        #     type: PKCS12
 
         kafka_listeners:
 
@@ -105,14 +118,16 @@ provisioner:
         
         kafka_admin:
           listener_name: admin
-          authentication:
-            tls:
-              trustedCA: /etc/certs/ca-root.pem
-              keystore:
-                location: /etc/certs/cert-cluster.p12
-                password: changeit
-                type: PKCS12
+          # authentication:
+          #   tls:
+          #     trustedCA: /etc/certs/ca-root.pem
+          #     keystore:
+          #       location: /etc/certs/cert-cluster.p12
+          #       password: changeit
+          #       type: PKCS12
 
+        kafka_skip_verify_under_replicated: true
+        
     host_vars:
       machine1:
         kafka_broker_id: 1

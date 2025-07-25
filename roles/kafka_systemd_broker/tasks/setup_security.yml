@@ -29,16 +29,16 @@
   block:
     - name: Copy java truststore file
       ansible.builtin.copy:
-        src: "{{ kafka_ssl_truststore_file }}"
-        dest: "{{ kafka_ssl_truststore_location }}"
+        src: "{{ kafka_tls_config.trustedCA.file }}"
+        dest: "{{ kafka_tls_config.trustedCA.location }}"
         owner: "{{ kafka_user }}"
         group: "{{ kafka_group }}"
         mode: 0400
 
     - name: Copy java keystore file
       ansible.builtin.copy:
-        src: "{{ kafka_ssl_keystore_file }}"
-        dest: "{{ kafka_ssl_keystore_location }}"
+        src: "{{ kafka_tls_config.keystore.file }}"
+        dest: "{{ kafka_tls_config.keystore.location }}"
         owner: "{{ kafka_user }}"
         group: "{{ kafka_group }}"
         mode: 0400

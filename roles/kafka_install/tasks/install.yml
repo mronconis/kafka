@@ -44,7 +44,7 @@
     path: "{{ __kafka_local_archive_path }}"
   register: __kafka_local_archive
   delegate_to: localhost
-
+    
 - name: Download artifact
   when:
     - __kafka_local_archive.stat is defined
