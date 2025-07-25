@@ -1,0 +1,22 @@
+# {{ ansible_managed }} 
+
+[Unit]
+Description=Cruise Control
+After=syslog.target network.target
+
+[Service]
+Type=simple
+
+Restart=on-failure
+RestartSec=10s
+StandardOutput=null
+
+User={{ cruise_control_user }}
+Group={{ cruise_control_group }}
+
+ExecStart={{ cruise_control_install_home_dir }}/kafka-cruise-control-start.sh {{ cruise_control_install_home_dir }}/config/cruisecontrol.properties
+ExecStop={{ cruise_control_install_home_dir }}/kafka-cruise-control-stop.sh
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,6 @@
+---
+- name: Verify Cruise Control is listening
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: "{{ cruise_control_port | default(9092) }}"
+  when: not (ansible_check_mode or cruise_control_skip_verify_listening)
