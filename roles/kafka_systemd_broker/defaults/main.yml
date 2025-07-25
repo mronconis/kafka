@@ -62,6 +62,7 @@ kafka_additional_conf: {}
 kafka_jaas_debug: false
 
 kafka_kraft_mode: "{{ kafka_kraft_mode | default(false) }}"
+
 kafka_kraft_roles: "{{ group_names | intersect([kafka_broker_servers_ansible_group, kafka_controller_servers_ansible_group]) }}"
 
 kafka_skip_setup_storage: true

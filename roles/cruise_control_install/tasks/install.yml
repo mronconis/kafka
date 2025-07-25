@@ -1,0 +1,83 @@
+---
+
+- name: Check local download archive path
+  ansible.builtin.stat:
+    path: "{{ lookup('env', 'PWD') }}"
+  register: __cruise_control_local_path
+  delegate_to: localhost
+
+- name: Set download filename
+  ansible.builtin.set_fact:
+    __cruise_control_install_archive_file: "{{ amqstreams_enable | ternary(amqstreams_cruise_control_archive_filename, cruise_control_archive_filename) }}"
+
+- name: Set download paths
+  ansible.builtin.set_fact:
+    __cruise_control_remote_archive_path: "{{ cruise_control_install_workdir }}/{{ __cruise_control_install_archive_file }}"
+    __cruise_control_local_archive_path: "{{ __cruise_control_local_path.stat.path }}/{{ __cruise_control_install_archive_file }}"
+
+- name: Set download url
+  ansible.builtin.set_fact:
+    __cruise_control_install_download_url: "{{ amqstreams_enable | ternary(amqstreams_cruise_control_download_url, cruise_control_download_url) }}"
+
+- name: Check local archive
+  ansible.builtin.stat:
+    path: "{{ __cruise_control_local_archive_path }}"
+  register: __cruise_control_local_archive
+  delegate_to: localhost
+
+- name: Download artifact
+  when:
+    - __cruise_control_local_archive.stat is defined
+    - not __cruise_control_local_archive.stat.exists
+  block:
+    - name: Download from rhn
+      ansible.builtin.include_tasks: install/rhn.yml
+      when:
+        - amqstreams_enable
+
+    - name: Download from web
+      ansible.builtin.include_tasks: install/web.yml
+      when:
+        - not amqstreams_enable
+
+- name: Check remote archive
+  ansible.builtin.stat:
+    path: "{{ __cruise_control_remote_archive_path }}"
+  register: __cruise_control_remote_archive
+  become: true
+
+- name: Ensure workdir {{ cruise_control_install_workdir }} exists.
+  ansible.builtin.file:
+    path: "{{ cruise_control_install_workdir }}"
+    state: directory
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0750
+  become: true
+
+- name: Copy archive to target nodes
+  ansible.builtin.copy:
+    src: "{{ __cruise_control_local_archive_path }}"
+    dest: "{{ __cruise_control_remote_archive_path }}"
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0640
+  register: new_version_downloaded
+  when:
+    - __cruise_control_remote_archive.stat is defined
+    - not __cruise_control_remote_archive.stat.exists
+  become: true
+
+- name: Unarchive {{ __cruise_control_remote_archive_path }}
+  ansible.builtin.unarchive:
+    src: "{{ __cruise_control_remote_archive_path }}"
+    dest: "{{ cruise_control_install_workdir }}"
+    remote_src: true
+    creates: "{{ cruise_control_home }}"
+    owner:  "{{ cruise_control_user }}"
+    group:  "{{ cruise_control_group }}"
+  become: true
+
+# - name: "Install Cruise Control Service (state=present)"
+#   ansible.builtin.include_tasks: setup.yml
+#   when: state == 'present'

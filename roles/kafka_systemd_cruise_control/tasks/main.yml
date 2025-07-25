@@ -1,0 +1,84 @@
+---
+# tasks file for kafka_systemd_cruise_control
+
+- name: "Copy log4j.properties"
+  ansible.builtin.template:
+    src: "templates/log4j.properties.j2"
+    dest: "{{ cruise_control_home }}/config/log4j.properties"
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0400
+  become: true
+  notify:
+    - Restart cruise-control
+
+- name: Create log directory
+  ansible.builtin.file:
+    path: "{{ cruise_control_log_dir }}"
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0755
+    state: directory
+  become: true
+
+- name: "Copy authcredentials.txt"
+  ansible.builtin.template:
+    src: "templates/authcredentials.txt.j2"
+    dest: "{{ cruise_control_home }}/config/authcredentials.txt"
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0400
+  become: true
+  notify:
+    - Restart cruise-control
+
+- name: "Copy cruisecontrol.properties"
+  ansible.builtin.template:
+    src: "templates/cruisecontrol.properties.j2"
+    dest: "{{ cruise_control_home }}/config/cruisecontrol.properties"
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0400
+  become: true
+  notify:
+    - Restart cruise-control
+
+- name: "Copy capacity.json"
+  ansible.builtin.template:
+    src: "templates/capacity.json.j2"
+    dest: "{{ cruise_control_home }}/config/capacity.json"
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0400
+  become: true
+  notify:
+    - Restart cruise-control
+
+- name: Setup security resources
+  ansible.builtin.include_tasks: setup_security.yml
+  
+- name: Create systemd unit file
+  ansible.builtin.template:
+    src: cruise-control.service.j2
+    dest: "{{ cruise_control_service_file }}"
+    owner: root
+    group: root
+    mode: 0644
+    backup: "{{ cruise_control_template_backup }}"
+  become: true
+  notify:
+    - Reload systemd
+    - Restart cruise-control
+
+# ---------------------------
+# Enable Cruise Control Service
+# ---------------------------
+- name: Enable cruise-control
+  ansible.builtin.service:
+    name: "{{ cruise_control_service_name }}"
+    enabled: true
+  when: not ansible_check_mode
+  become: true
+
+- name: Run Handlers
+  ansible.builtin.meta: flush_handlers

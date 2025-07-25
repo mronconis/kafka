@@ -1,0 +1,19 @@
+---
+# vars file for cruise_control_install
+
+# TBD: upstream cruise control
+cruise_control_archive_filename: "cruise-control.tgz"
+cruise_control_download_base_url: "https://archive.apache.org/dist/kafka"
+cruise_control_download_url: "tbd"
+cruise_control_dirname: "cruise-control"
+
+# amqstreams cruise control
+amqstreams_cruise_control_archive_filename: "amq-streams-{{ amqstreams_version }}-cruise-control-bin.zip"
+amqstreams_cruise_control_download_base_url: "https://access.redhat.com/jbossnetwork/restricted/softwareDownload.html"
+amqstreams_cruise_control_download_url: "{{ amqstreams_cruise_control_download_base_url }}?softwareId={{ amqstreams_cruise_control_versions[amqstreams_version]['rhn_id'] }}"
+amqstreams_cruise_control_dirname: "cruise-control"
+
+# amqstreams cruise control catalogue
+amqstreams_cruise_control_versions:
+  2.9.1:
+    rhn_id: 108008

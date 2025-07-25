@@ -1,0 +1,10 @@
+---
+# handlers file for kafka_systemd_cruise_control
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: Restart cruise-control
+  ansible.builtin.include_tasks: service_restarted.yml
