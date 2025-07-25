@@ -1,0 +1,13 @@
+---
+- name: Setup a cluster
+  hosts: controller,broker
+  roles:
+    - saiello.kafka.kafka_install
+    - { role: saiello.kafka.kafka_systemd_zookeeper, when: not kafka_kraft_mode }
+    - saiello.kafka.kafka_systemd_broker
+
+- name: Setup a cruise control
+  hosts: cc
+  roles:
+    - saiello.kafka.cruise_control_install
+    - saiello.kafka.kafka_systemd_cruise_control

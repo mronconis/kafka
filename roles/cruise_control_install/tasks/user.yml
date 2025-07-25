@@ -1,0 +1,15 @@
+---
+
+- name: Add kafka group
+  ansible.builtin.group:
+    name: "{{ cruise_control_group }}"
+    state: present
+  become: true
+
+- name: Add kafka user
+  ansible.builtin.user:
+    name: "{{ cruise_control_user }}"
+    groups: "{{ cruise_control_group }}"
+    password: "{{ cruise_control_user_password | default(omit) }}"
+  when: cruise_control_create_user
+  become: true

@@ -1,0 +1,40 @@
+---
+
+- name: Create security dir for Cruise Control
+  ansible.builtin.file:
+    path: "{{ cruise_control_home }}/security"
+    state: directory
+    owner: "{{ cruise_control_user }}"
+    group: "{{ cruise_control_group }}"
+    mode: 0755
+  become: true
+
+# - name: Copy jaas config file
+#   ansible.builtin.template:
+#     src: "templates/jaas.conf.j2"
+#     dest: "{{ kafka_jaas_config_file_location }}"
+#     owner: "{{ cruise_control_user }}"
+#     group: "{{ cruise_control_group }}"
+#     mode: 0400
+#   become: true
+
+- name: Copy SSL resources
+  block:
+    - name: Copy java truststore file
+      ansible.builtin.copy:
+        src: "{{ cruise_control_kafka_client.tls.trustedCA.file }}"
+        dest: "{{ cruise_control_kafka_client.tls.trustedCA.location }}"
+        owner: "{{ cruise_control_user }}"
+        group: "{{ cruise_control_group }}"
+        mode: 0400
+
+    - name: Copy java keystore file
+      ansible.builtin.copy:
+        src: "{{ cruise_control_kafka_client.tls.keystore.file }}"
+        dest: "{{ cruise_control_kafka_client.tls.keystore.location }}"
+        owner: "{{ cruise_control_user }}"
+        group: "{{ cruise_control_group }}"
+        mode: 0400
+  when:
+    - cruise_control_kafka_client.tls is defined
+  become: true

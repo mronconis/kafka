@@ -22,6 +22,8 @@ Plugins and modules within a collection may be tested with only specific Ansible
 * [kafka_install](https://github.com/saiello/kafka/blob/main/roles/kafka_install/README.md): download and install
 * [kafka_systemd_zookeeper](https://github.com/saiello/kafka/blob/main/roles/kafka_systemd_zookeeper/README.md): configure zookeeper systemd unit
 * [kafka_systemd_broker](https://github.com/saiello/kafka/blob/main/roles/kafka_systemd_broker/README.md): configure kafka broker systemd unit
+* [cruise_control_install](https://github.com/saiello/kafka/blob/main/roles/cruise_control_install/README.md): download and install cruise control
+* [kafka_systemd_cruise_control](https://github.com/saiello/kafka/blob/main/roles/kafka_systemd_cruise_control/README.md): configure cruise control systemd
 
 
 ### Playbooks

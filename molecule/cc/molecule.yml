@@ -1,0 +1,188 @@
+---
+# skip prerun because I am experiencing the issue described here:
+# https://github.com/ansible/ansible-lint/issues/2070
+prerun: false
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  ansible-lint -v
+platforms:
+
+  - name: machine1
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - controller
+      - broker
+    networks:
+      - name: molecule
+
+  - name: machine6
+    image: registry.access.redhat.com/ubi8/ubi-init:latest
+    pre_build_image: true
+    privileged: true
+    command: "/usr/sbin/init"
+    groups:
+      - cc
+    networks:
+      - name: molecule
+
+provisioner:
+  name: ansible
+  ansible_args:
+    - --diff
+  playbooks:
+    converge: converge.yml
+    prepare: ../shared/prepare.yml
+    verify: verify.yml
+  inventory:
+    group_vars:
+      all:
+        amqstreams_enable: true
+        amqstreams_version: "2.9.1"
+        kafka_prereqs_setup_openjdk_package_name: java-17-openjdk
+
+        kafka_advertised_host: "{{ ansible_hostname }}"
+        #kafka_advertised_interface_name: eth0
+        
+        # kraft mode
+        kafka_kraft_mode: true
+        kafka_cluster_id: YPfyovBeRWmvbFDAzikROA
+        kafka_skip_setup_storage: false
+
+        kafka_tls_config:
+          enabled: true
+          trustedCA:
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
+            location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
+            type: PEM
+          keystore:
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-cluster.p12"
+            location: "{{ kafka_home }}/security/ansible_kafka-keystore.p12"
+            password: changeit
+            type: PKCS12
+      
+        kafka_authorization:
+          type: simple
+          deny_by_default: true
+          super_users:
+            - User:CN=kafka,O=Saiello,L=Rome,C=IT
+            - User:CN=admin,O=Saiello,L=Rome,C=IT
+
+        kafka_listeners:
+
+          - name: CONTROLLER
+            port: 9090
+            tls: true 
+            authentication:
+              type: tls
+
+          - name: REPLICATION
+            port: 9091
+            tls: true 
+            authentication:
+              type: tls
+       
+          - name: CLIENT
+            port: 9092
+            tls: true
+            authentication:
+              type: scram-sha-512
+          
+          - name: ADMIN
+            port: 9093
+            tls: true 
+            authentication:
+              type: tls
+
+        kafka_additional_conf:
+          num.partitions: 1
+          log.retention.hours: 148
+          # Cruise control metrics reporter
+          metric.reporters: com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter
+          cruise.control.metrics.topic.auto.create: false
+          cruise.control.metrics.topic.num.partitions: 1
+          cruise.control.metrics.topic.replication.factor: 1
+          cruise.control.metrics.reporter.bootstrap.servers: machine1:9093
+          cruise.control.metrics.reporter.security.protocol: SSL
+          cruise.control.metrics.reporter.ssl.truststore.location: "{{ kafka_admin.tls.trustedCA.location }}"
+          cruise.control.metrics.reporter.ssl.truststore.type: "{{ kafka_admin.tls.trustedCA.type }}"
+          cruise.control.metrics.reporter.ssl.keystore.location: "{{ kafka_admin.tls.keystore.location }}"
+          cruise.control.metrics.reporter.ssl.keystore.password: "{{ kafka_admin.tls.keystore.password }}"
+          cruise.control.metrics.reporter.ssl.keystore.type: "{{ kafka_admin.tls.keystore.type }}"
+  
+        kafka_inter_broker_listener_name: REPLICATION
+        
+        kafka_admin:
+          listener_name: ADMIN
+          authentication:
+            type: tls
+          tls:
+            enabled: true
+            trustedCA:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
+              location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
+              type: PEM
+            keystore:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-admin.p12"
+              location: "{{ kafka_home }}/security/ansible_admin-keystore.p12"
+              password: changeit
+              type: PKCS12
+        
+        kafka_server_properties_template: kraft/server.properties.j2
+        kafka_server_properties_file_name: server.properties
+
+      cc:
+        cruise_control_prereqs_setup_openjdk_package_name: java-17-openjdk
+
+        cruise_control_cors_enable: 'true'
+        cruise_control_cors_origin: http://{{ ansible_host }}
+        cruise_control_cors_headers: User-Task-ID,Cache-Control,Cache-Buster
+
+        cruise_control_sample_store_replication_factor: 1
+
+        cruise_control_capacity:
+          brokerCapacities:
+          - brokerId: "-1"
+            capacity:
+              DISK:
+                /var/data/kafka: "1000"
+              CPU: "100"
+              NW_IN: "1250000"  # For example: 10 Gbps = 1250000 kB/s
+              NW_OUT: "1250000" # For example: 10 Gbps = 1250000 kB/s
+            doc: "Capacity unit used for disk is in MB, cpu is in percentage, network throughput is in KB."
+
+        cruise_control_auth_users: 
+          - username: admin 
+            password: "changeit"
+            role: ADMIN
+
+        cruise_control_bootstrap_servers: machine1:9093
+
+        cruise_control_kafka_client:
+          authentication:
+            type: tls
+          tls:
+            enabled: true
+            trustedCA:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
+              location: "{{ cruise_control_home }}/security/ansible_kafka-ca.crt"
+              type: PEM
+            keystore:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-admin.p12"
+              location: "{{ cruise_control_home }}/security/ansible_admin-keystore.p12"
+              password: changeit
+              type: PKCS12
+
+    host_vars:
+      machine1:
+        kafka_node_id: 1
+        kafka_dir_id: 1IPhBz5sQEuxBCNR15oApA
+      localhost:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+verifier:
+  name: ansible
