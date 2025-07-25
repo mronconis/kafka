@@ -16,13 +16,17 @@ kafka_min_heap: 1G
 kafka_template_backup: yes
 kafka_zookeeper_servers_ansible_group: zookeeper
 
+kafka_broker_servers_ansible_group: broker
+kafka_controller_servers_ansible_group: controller
+
 kafka_log4j_dir: /var/log/kafka
 kafka_log_dirs:
   - /var/data/kafka
 
 kafka_server_properties_template: server.properties.j2
 kafka_server_properties_file_name: server.properties
-kafka_server_properties_file: "{{ kafka_home }}/config/{{ kafka_server_properties_file_name }}"
+
+kafka_server_properties_file: "{{ kafka_home }}/config/{{ kafka_kraft_mode | ternary('kraft/', '') }}{{ kafka_server_properties_file_name }}"
 
 kafka_skip_verify_listening: false
 kafka_skip_verify_under_replicated: false
@@ -37,6 +41,7 @@ kafka_listeners:
     tls: false
 
 kafka_inter_broker_listener_name: PLAINTEXT
+kafka_controller_listener_name: CONTROLLER
 kafka_admin_listener_name: PLAINTEXT
 
 kafka_jmx_enabled: false
@@ -55,3 +60,7 @@ kafka_kerberos_keytab_location: "{{ kafka_home }}/security/ansible_kafka.keytab"
 kafka_additional_conf: {}
 
 kafka_jaas_debug: false
+
+kafka_kraft_mode: "{{ kafka_kraft_mode | default(false) }}"
+
+kafka_skip_setup_storage: true

@@ -3,5 +3,5 @@
   hosts: all
   roles:
     - kafka_install
-    - kafka_systemd_zookeeper
+    - { role: kafka_systemd_zookeeper, when: not kafka_kraft_mode }
     - kafka_systemd_broker

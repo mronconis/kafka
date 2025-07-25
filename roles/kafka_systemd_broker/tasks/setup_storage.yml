@@ -1,0 +1,66 @@
+---
+- name: "Ensure controller dir id exists"
+  ansible.builtin.assert:
+    that:
+      - hostvars[item]['kafka_dir_id'] is defined
+    quiet: true
+  with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
+  run_once: true
+      
+- name: Init controllers facts
+  ansible.builtin.set_fact:
+    initial_controllers: []
+    controller_port: "{{ kafka_listeners | selectattr('name', 'equalto', kafka_controller_listener_name) | map(attribute='port') | join }}"
+  run_once: true
+
+- name: Set initial controllers facts
+  ansible.builtin.set_fact:
+    initial_controllers: "{{ initial_controllers + 
+      [(hostvars[item]['kafka_node_id'] | string) + '@' + item + ':' + controller_port + ':' + hostvars[item]['kafka_dir_id']] }}"
+  with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
+  run_once: true
+    
+- name: Set controllers facts
+  ansible.builtin.set_fact:
+    __kafka_storage_format_opts: "{{ __kafka_storage_format_opts + ' --initial-controllers ' + (initial_controllers | join(',')) }}"
+  when: inventory_hostname in groups[kafka_controller_servers_ansible_group]
+
+- name: Set broker facts
+  ansible.builtin.set_fact:
+    __kafka_storage_format_opts: "{{ __kafka_storage_format_opts + ' --no-initial-controllers' }}"
+  when: 
+  - inventory_hostname not in groups[kafka_controller_servers_ansible_group]
+  - inventory_hostname in groups[kafka_broker_servers_ansible_group]
+
+- name: Debug storage info command
+  ansible.builtin.debug:
+    msg: "{{ __kafka_commands_storage }} {{ __kafka_storage_info_opts }}"
+
+- name: Get storage info
+  ansible.builtin.command: "{{ __kafka_commands_storage }} {{ __kafka_storage_info_opts }}"
+  failed_when: not result_info.stdout
+  changed_when: false
+  become: true
+  become_user: "{{ kafka_user }}"
+  register: result_info
+
+- name: Output storage info 
+  ansible.builtin.debug:
+    msg: "{{ result_info.stdout }}"
+
+- name: Debug storage format command
+  ansible.builtin.debug:
+    msg: "{{ __kafka_commands_storage }} {{ __kafka_storage_format_opts }}"
+  when: (not ansible_check_mode) and ('is not formatted' in result_info.stdout)
+
+- name: Run storage format
+  ansible.builtin.command: "{{ __kafka_commands_storage }} {{ __kafka_storage_format_opts }}"
+  become: true
+  become_user: "{{ kafka_user }}"
+  register: result_format
+  when: (not ansible_check_mode) and ('is not formatted' in result_info.stdout)
+
+- name: Output storage format
+  ansible.builtin.debug:
+    msg: "{{ result_format.stdout }}"
+  when: (not ansible_check_mode) and ('is not formatted' in result_info.stdout)

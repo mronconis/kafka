@@ -8,13 +8,16 @@ kafka_dirname: "kafka_{{ kafka_scala_version }}-{{ kafka_versions[kafka_version]
 
 # amqstreams
 amqstreams_scala_version: "{{ amqstreams_versions[amqstreams_version]['scala_version'] }}"
-amqstreams_archive_filename: "amq-streams-{{ amqstreams_version }}-bin.zip"
+amqstreams_archive_filename: "amq-streams-{{ amqstreams_version }}-kafka-bin.zip"
 amqstreams_download_base_url: "https://access.redhat.com/jbossnetwork/restricted/softwareDownload.html"
 amqstreams_download_url: "{{ amqstreams_download_base_url }}?softwareId={{ amqstreams_versions[amqstreams_version]['rhn_id'] }}"
 amqstreams_dirname: "kafka_{{ amqstreams_scala_version }}-{{ amqstreams_versions[amqstreams_version]['microversion'] | regex_replace(' \\((.*)\\)$', '') }}"
 
 # upstream catalogue
 kafka_versions:
+  3.9.1:
+    scala_version: 2.13
+    microversion: 3.9.1
   3.7.0:
     scala_version: 2.13
     microversion: 3.7.0
@@ -45,6 +48,10 @@ kafka_versions:
 
 # amqstreams catalogue
 amqstreams_versions:
+  2.9.1:
+    scala_version: 2.13
+    microversion: 3.9.1.redhat-00001
+    rhn_id: 108009
   2.7.0:
     scala_version: 2.13
     microversion: 3.7.0.redhat-00007
