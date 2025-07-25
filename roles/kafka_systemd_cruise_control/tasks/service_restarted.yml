@@ -1,0 +1,10 @@
+---
+- name: Restart cruise-control
+  ansible.builtin.service:
+    name: "{{ cruise_control_service_name }}"
+    state: restarted
+  when: not ansible_check_mode
+  become: true
+
+- name: Check Cruise Control Service
+  ansible.builtin.include_tasks: service_check.yml

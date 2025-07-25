@@ -1,0 +1,19 @@
+---
+# defaults file for cruise_control_install
+
+cruise_control_install_workdir: "/opt/cruise-control"
+cruise_control_install_artifact_root: cruise-control
+
+cruise_control_home: "{{ cruise_control_install_workdir }}/{{ amqstreams_enable | ternary(amqstreams_cruise_control_dirname, cruise_control_dirname) }}"
+
+# Packages
+cruise_control_prereqs_setup_openjdk: true
+cruise_control_prereqs_setup_openjdk_package_name: java-11-openjdk
+cruise_control_prereqs_setup_unzip: true
+
+# User and Group
+cruise_control_user: kafka
+cruise_control_group: kafka
+cruise_control_create_user: true
+
+skip_packages_install: false

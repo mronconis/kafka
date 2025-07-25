@@ -1,0 +1,14 @@
+---
+# Red Hat Accounts fail due to SSO change: https://github.com/ansible-middleware/redhat-csp-download/issues/20
+- name: Download AMQ streams Cruise Control from {{ __cruise_control_install_download_url }}
+  collections:
+  - middleware_automation.redhat_csp_download
+  redhat_csp_download:
+    dest: "{{ __cruise_control_local_archive_path }}"
+    url: "{{ __cruise_control_install_download_url }}"
+    username: "{{ lookup('env', 'RHN_USERNAME', default = cruise_control_install_url_username) }}"
+    password: "{{ lookup('env', 'RHN_PASSWORD', default = cruise_control_install_url_password) }}"
+  run_once: true
+  delegate_to: localhost
+  become: false
+  check_mode: false

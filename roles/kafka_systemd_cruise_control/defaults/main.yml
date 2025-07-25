@@ -1,0 +1,28 @@
+---
+cruise_control_service_name: cruise-control
+cruise_control_service_file: /usr/lib/systemd/system/{{ cruise_control_service_name }}.service
+cruise_control_skip_verify_listening: false
+
+cruise_control_log_dir: /var/log/cruise-control
+
+cruise_control_port: 9090
+cruise_control_address: 0.0.0.0
+
+cruise_control_security_enable: true
+
+cruise_control_additional_conf: {}
+
+cruise_control_auth_users: 
+  - username: admin 
+    password: password
+    role: ADMIN
+
+  - username: viewer 
+    password: password
+    role: VIEWER
+
+  - username: user 
+    password: password
+    role: USER
+
+cruise_control_template_backup: true

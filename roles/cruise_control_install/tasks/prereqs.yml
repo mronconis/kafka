@@ -1,0 +1,24 @@
+---
+- name: Set Cruise Control home dir
+  ansible.builtin.set_fact:
+    cruise_control_install_home_dir: "{{ cruise_control_install_workdir }}/{{ cruise_control_install_artifact_root }}"
+    
+- name: Set Java to be Installed
+  ansible.builtin.set_fact:
+    packages_to_install: "{{ packages_to_install | default([]) + [ cruise_control_prereqs_setup_openjdk_package_name ] }}"
+  when: cruise_control_prereqs_setup_openjdk
+
+- name: Set Unzip to be Installed
+  ansible.builtin.set_fact:
+    packages_to_install: "{{ packages_to_install | default([]) + [ 'unzip' ] }}"
+  when: cruise_control_prereqs_setup_unzip
+
+- name: Install packages
+  ansible.builtin.package:
+    name: "{{ packages_to_install }}"
+    state: present
+  register: packages_result
+  retries: 5
+  until: packages_result is success
+  when: packages_to_install is defined and not skip_packages_install
+  become: true
