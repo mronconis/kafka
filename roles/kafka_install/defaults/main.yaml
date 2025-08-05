@@ -17,3 +17,5 @@ amqstreams_enable: false
 kafka_install_workdir: /opt/kafka
 
 kafka_home: "{{ kafka_install_workdir }}/{{ amqstreams_enable | ternary(amqstreams_dirname, kafka_dirname) }}"
+
+kafka_local_archive_dir: "{{ lookup('env', 'PWD') }}"
