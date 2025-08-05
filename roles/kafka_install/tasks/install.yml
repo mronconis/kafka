@@ -22,7 +22,7 @@
 
 - name: Check local download archive path
   ansible.builtin.stat:
-    path: "{{ lookup('env', 'PWD') }}"
+    path: "{{ kafka_local_archive_dir }}"
   register: __kafka_local_path
   delegate_to: localhost
 
