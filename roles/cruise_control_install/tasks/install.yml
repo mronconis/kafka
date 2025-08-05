@@ -2,7 +2,7 @@
 
 - name: Check local download archive path
   ansible.builtin.stat:
-    path: "{{ lookup('env', 'PWD') }}"
+    path: "{{ cruise_control_local_archive_dir }}"
   register: __cruise_control_local_path
   delegate_to: localhost
 
