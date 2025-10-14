@@ -19,7 +19,8 @@
     group: "{{ kafka_group }}"
     mode: 0755
   when:
-    - kafka_admin.tls
+    - kafka_admin is defined
+    - kafka_admin.tls is defined
   become: true
 
 - name: Copy admin SSL resources
@@ -40,5 +41,6 @@
         group: "{{ kafka_group }}"
         mode: 0400
   when:
+    - kafka_admin is defined
     - kafka_admin.tls is defined
   become: true
