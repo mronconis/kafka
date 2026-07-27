@@ -1,0 +1,120 @@
+---
+- name: Fetch Kafka broker API versions
+  ansible.builtin.command:
+    cmd: >-
+      {{ __kafka_commands_api_versions }}
+  register: kafka_api_versions_raw
+  changed_when: false
+  failed_when: false
+
+- name: Assert Kafka broker API responsiveness
+  ansible.builtin.assert:
+    that:
+      - kafka_api_versions_raw.rc == 0
+    success_msg: "OK: Kafka broker on {{ inventory_hostname }} is responsive."
+    fail_msg: >-
+      ERROR: Kafka broker on {{ inventory_hostname }} failed API versions check!
+      Output: {{ kafka_api_versions_raw.stderr | default(kafka_api_versions_raw.stdout) }}
+
+# ==============================================================================
+# 1. TOPIC FAULT TOLERANCE CHECKS (RF > 1 AND MinISR < RF)
+# ==============================================================================
+
+- name: Fetch Kafka topic descriptions
+  ansible.builtin.command:
+    cmd: >-
+      {{ __kafka_commands_topics }}
+      --describe
+  register: kafka_topics_describe_raw
+  changed_when: false
+  run_once: true
+
+- name: Fetch Kafka topic configuration overrides
+  ansible.builtin.command:
+    cmd: >-
+      {{ __kafka_commands_configs }}
+      --entity-type topics
+      --describe
+  register: kafka_topics_configs_raw
+  changed_when: false
+  run_once: true
+
+- name: Parse non-fault-tolerant topics (RF == 1)
+  ansible.builtin.set_fact:
+    kafka_single_replica_topics: >-
+      {{
+        kafka_topics_describe_raw.stdout_lines
+        | select('search', 'ReplicationFactor:\s*1\b')
+        | map('regex_replace', '^Topic:\s*([^\s\t]+).*$', '\1')
+        | reject('match', '^__.*')
+        | list
+      }}
+    kafka_min_isr_equals_rf_topics: >-
+      {{
+        kafka_topics_configs_raw.stdout_lines
+        | select('search', 'min.insync.replicas=')
+        | map('regex_replace', '^.*Topic:\s*([^\s\t]+).*$', '\1')
+        | reject('match', '^__.*')
+        | list
+      }}
+  run_once: true
+
+- name: Assert topics are fault tolerance
+  ansible.builtin.assert:
+    that:
+      - kafka_single_replica_topics | length == 0
+    success_msg: "OK: All user topics have ReplicationFactor > 1."
+    fail_msg: >-
+      ERROR: Non-fault-tolerant topics detected with ReplicationFactor <= 1:
+      {{ kafka_single_replica_topics }}
+  run_once: true
+
+# ==============================================================================
+# 2. END-TO-END DATA FLOW VERIFICATION (TOPIC, PRODUCER, CONSUMER)
+# ==============================================================================
+
+- name: Create test topic
+  ansible.builtin.command:
+    cmd: >-
+      {{ __kafka_commands_topics }}
+      --create
+      --topic ansible-test-topic
+      --partitions 10
+      --replication-factor 3
+      --if-not-exists
+  register: kafka_create_topic_raw
+  changed_when: "'Created topic' in kafka_create_topic_raw.stdout"
+  run_once: true
+
+- name: Produce data to test topic
+  ansible.builtin.shell: >-
+    echo "healthcheck-payload-{{ ansible_date_time.epoch | default('12345678') }}" |
+    {{ __kafka_commands_producer }}
+    --topic ansible-test-topic
+  register: kafka_produce_raw
+  changed_when: false
+  run_once: true
+
+- name: Consume data from test topic
+  ansible.builtin.command:
+    cmd: >-
+      {{ __kafka_commands_consumer }}
+      --topic ansible-test-topic
+      --group ansible-test-cg
+      --from-beginning
+      --timeout-ms 10000
+  register: kafka_consume_raw
+  changed_when: false
+  run_once: true
+
+- name: Assert end-to-end data flow success
+  ansible.builtin.assert:
+    that:
+      - kafka_consume_raw.rc == 0
+      - kafka_consume_raw.stdout | length > 0
+    success_msg: "OK: Successfully produced and consumed test payload on 'ansible-test-topic'."
+    fail_msg: >-
+      ERROR: Data flow check failed on topic 'ansible-test-topic'!
+      Consumer stdout: {{ kafka_consume_raw.stdout }}
+      Consumer stderr: {{ kafka_consume_raw.stderr }}
+  run_once: true

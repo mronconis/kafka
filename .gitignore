@@ -1,10 +1,12 @@
 __pycache__
-venv
+.venv
 *.tgz
 *.tar.gz
 .DS_Store
 .vagrant
+.collections
 !molecule/shared/certs/
 molecule/shared/certs/*
 !molecule/shared/certs/configs/
 !molecule/shared/certs/Makefile
+examples/vagrant/collections
