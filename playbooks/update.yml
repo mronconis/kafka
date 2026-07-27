@@ -2,6 +2,11 @@
 - name: Update a cluster
   hosts: all
   serial: 1
+  pre_tasks:
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
   roles:
-    - kafka_systemd_zookeeper
+    - { role: kafka_systemd_zookeeper, when: not kafka_kraft_mode }
     - kafka_systemd_broker
