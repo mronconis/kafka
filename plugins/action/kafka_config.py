@@ -151,7 +151,7 @@ class KafkaConfigGenerator():
   def _coalesce_listeners(self, listeners):
 
     advertised_host = self._config.pop('advertised_host', 'localhost')
-    tls = self._config.pop('tls', {})
+    tls = self._config.get('tls', {})
     listener_map = dict()
 
     for listener in listeners:
@@ -266,6 +266,8 @@ class KafkaConfigGenerator():
 
     allowed_listeners = kafka_config['listeners'].keys()
     listener_name = admin.pop('listener_name')
+    
+
     if listener_name not in allowed_listeners:
       raise ValueError("Admin listener_name '%s' is invalid. Allowed values are: %s " % (listener_name, allowed_listeners))
 
@@ -274,18 +276,24 @@ class KafkaConfigGenerator():
   
     options = {}
     
+    if protocol in ['SSL', 'SASL_SSL']:
+
+      admin_tls = admin.pop('tls')
+      tls = admin_tls if admin_tls and bool(admin_tls['enabled']) else self._config.pop('tls', {})
+
+      if tls and bool(tls['enabled']):
+        if 'trustedCA' in tls:
+          options['ssl.truststore.location'] = tls['trustedCA']['location']
+          options['ssl.truststore.type'] = tls['trustedCA']['type']
+      
+        if 'keystore' in tls:
+          options['ssl.keystore.location'] = tls['keystore']['location']
+          options['ssl.keystore.type'] = tls['keystore']['type']
+          options['ssl.keystore.password'] = tls['keystore']['password']
+      else:
+        raise ValueError("Admin client does not have a configured TLS certificate for listener %s. Listener security protocol is: %s " % (listener_name, protocol))
+
     authentication = admin.pop('authentication', {})
-    tls = admin.pop('tls', {})
-
-    if 'trustedCA' in tls:
-      options['ssl.truststore.location']=tls['trustedCA']['location']
-      options['ssl.truststore.type']=tls['trustedCA']['type']
-   
-    if 'keystore' in tls:
-      options['ssl.keystore.location']=tls['keystore']['location']
-      options['ssl.keystore.type']=tls['keystore']['type']
-      options['ssl.keystore.password']=tls['keystore']['password']
-
     authentication_type = authentication.pop('type', '-')
     authentication_config = authentication.pop('config', {})
 
@@ -293,7 +301,7 @@ class KafkaConfigGenerator():
       jaas_login_module_args = ' '.join(['{}="{}"'.rjust(9, ' ')
         .format(k, v) for k, v in authentication_config.items()])
       options['sasl.jaas.config']='org.apache.kafka.common.security.plain.PlainLoginModule required {};'.format(jaas_login_module_args)
-
+      
     if authentication_type == 'gssapi':
 
       options['sasl.mechanism'] = 'GSSAPI'
@@ -310,8 +318,7 @@ class KafkaConfigGenerator():
         .format(k, v) for k, v in authentication_config.items()])
       options['sasl.jaas.config']='org.apache.kafka.common.security.scram.ScramLoginModule required {};'.format(jaas_login_module_args)
 
-    
-    # TODO check options according to protocol 
+    # TODO check options according to protocol
 
     return {
       'host': listener['advertised'],
@@ -319,7 +326,7 @@ class KafkaConfigGenerator():
       'protocol': protocol,
       'listener': '%s:%s' % (listener['advertised'], listener['port']),
       'require_command_config': bool(options),
-      'options': options 
+      'options': options
     }
 
 
