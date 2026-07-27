@@ -1,0 +1,89 @@
+
+- name: Verifying ZooKeeper nodes
+  block:
+    - name: Fetch ZooKeeper node status
+      ansible.builtin.shell: >-
+        echo srvr | nc -w 3 127.0.0.1 {{ zookeeper_client_port | default(2181) }}
+      register: zk_srvr_raw
+      changed_when: false
+      failed_when: false
+
+    - name: Extract ZooKeeper node mode
+      ansible.builtin.set_fact:
+        zk_node_mode: "{{ zk_srvr_raw.stdout | regex_search('Mode:\\s*(\\w+)', '\\1') | first | default('unknown') }}"
+
+    - name: Assert individual ZooKeeper node responsiveness
+      ansible.builtin.assert:
+        that:
+          - zk_srvr_raw.rc == 0
+          - zk_node_mode in ['leader', 'follower', 'standalone']
+        success_msg: "OK: ZooKeeper node on {{ inventory_hostname }} is active in '{{ zk_node_mode }}' mode."
+        fail_msg: >-
+          ERROR: ZooKeeper health check failed on {{ inventory_hostname }}!
+          Detected mode: '{{ zk_node_mode }}'.
+
+    - name: Aggregate ZooKeeper ensemble roles
+      ansible.builtin.set_fact:
+        zk_ensemble_modes: "{{ groups['zookeeper'] | map('extract', hostvars, 'zk_node_mode') | list }}"
+
+    - name: Assert ZooKeeper ensemble quorum balance
+      ansible.builtin.assert:
+        that:
+          - (zk_ensemble_modes | select('equalto', 'leader') | list | length) == 1
+          - (zk_ensemble_modes | select('equalto', 'follower') | list | length) == (groups['zookeeper'] | length - 1)
+        success_msg: >-
+          OK: ZooKeeper quorum is fully healthy (1 Leader and {{ groups['zookeeper'] | length - 1 }} Followers across {{ groups['zookeeper'] | length }} nodes).
+        fail_msg: >-
+          ERROR: ZooKeeper quorum topology mismatch!
+          Expected: 1 Leader and {{ groups['zookeeper'] | length - 1 }} Followers.
+          Detected: {{ zk_ensemble_modes | select('equalto', 'leader') | list | length }} Leader(s) and {{ zk_ensemble_modes | select('equalto', 'follower') | list | length }} Follower(s).
+          Current node modes: {{ zk_ensemble_modes }}
+          
+- name: Verifying brokers registered in ZooKeeper
+  run_once: true
+  block:
+    - name: Fetch registered brokers from ZooKeeper
+      ansible.builtin.shell: >-
+        {{ zookeeper_home }}/bin/zookeeper-shell.sh {{ inventory_hostname }}:{{ zookeeper_client_port | default(2181) }} ls /brokers/ids | awk -F '[][]' '/^\[/ {print $2}'
+      register: zk_brokers_raw
+      changed_when: false
+      become: true
+
+    - name: Set registered and inventory broker ID facts
+      ansible.builtin.set_fact:
+        zk_registered_broker_ids: "{{ zk_brokers_raw.stdout.replace(' ', '').split(',') | map('string') | list | sort }}"
+        inventory_broker_ids: "{{ groups['kafka'] | map('extract', hostvars, 'kafka_broker_id') | map('string') | list | sort }}"
+
+    - name: Assert registered brokers match inventory
+      ansible.builtin.assert:
+        that:
+          - zk_registered_broker_ids | length > 0
+          - zk_registered_broker_ids == inventory_broker_ids
+        success_msg: "OK: All {{ inventory_broker_ids | length }} inventory brokers are registered in ZooKeeper (IDs: {{ zk_registered_broker_ids }})."
+        fail_msg: >-
+          ERROR: Mismatch detected! 
+          Expected from inventory: {{ inventory_broker_ids }} 
+          Registered in ZooKeeper: {{ zk_registered_broker_ids }}
+  
+- name: Verifying Kafka controller election
+  run_once: true
+  block:
+    - name: Fetch Active Controller metadata from ZooKeeper
+      ansible.builtin.shell: >-
+        {{ kafka_home }}/bin/zookeeper-shell.sh {{ inventory_hostname }}:{{ zookeeper_client_port | default(2181) }} get /controller | grep -o '{"version":[^}]*}'
+      register: kafka_controller_raw
+      changed_when: false
+
+    - name: Parse Active Controller broker ID
+      ansible.builtin.set_fact:
+        active_controller_id: "{{ (kafka_controller_raw.stdout | from_json).brokerid | string }}"
+
+    - name: Assert Active Controller is present in inventory
+      ansible.builtin.assert:
+        that:
+          - active_controller_id in (groups['kafka'] | map('extract', hostvars, 'kafka_broker_id') | map('string') | list)
+        success_msg: "OK: Active Controller is valid and running on Broker ID {{ active_controller_id }}."
+        fail_msg: >-
+          ERROR: Active Controller check failed!
+          Detected Controller ID: '{{ active_controller_id }}'.
+          Ensure a broker is elected as Active Controller in ZooKeeper.

@@ -5,7 +5,7 @@ prerun: false
 dependency:
   name: galaxy
 driver:
-  name: docker
+  name: podman
 lint: |
   ansible-lint -v
 platforms:
@@ -72,8 +72,11 @@ platforms:
 
 provisioner:
   name: ansible
-  ansible_args:
-    - --diff
+  env:
+    ANSIBLE_COLLECTIONS_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.collections"
+  # ansible_args:
+  #   - --diff
+  #   - -vvv
   playbooks:
     converge: converge.yml
     prepare: ../shared/prepare.yml
@@ -81,7 +84,8 @@ provisioner:
   inventory:
     group_vars:
       all:
-        kafka_version: "3.9.1"
+        amqstreams_version: "3.2.0"
+        amqstreams_enable: true
         kafka_prereqs_setup_openjdk_package_name: java-17-openjdk
 
         kafka_advertised_host: "{{ ansible_hostname }}"
@@ -94,6 +98,7 @@ provisioner:
         kafka_tls_config:
           enabled: true
           trustedCA:
+            type: PEM
             file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
             location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
           keystore:
@@ -102,6 +107,13 @@ provisioner:
             password: changeit
             type: PKCS12
       
+        kafka_authorization:
+          type: simple
+          deny_by_default: true
+          super_users:
+            - User:CN=kafka,O=Saiello,L=Rome,C=IT
+            - User:admin
+
       controller:
         
         kafka_listeners:
@@ -111,7 +123,8 @@ provisioner:
             tls: true 
             authentication:
               type: tls
-            
+        
+        # FIXME
         kafka_admin:
 
         kafka_additional_conf:
@@ -122,16 +135,10 @@ provisioner:
         kafka_server_properties_file_name: controller.properties
 
         kafka_skip_verify_listening: true
-        kafka_skip_verify_under_replicated: true
+        kafka_skip_verify_under_replicated_partitions: true
+        kafka_skip_verify_unavailable_partitions: true
 
       broker:
-
-        kafka_authorization:
-          type: simple
-          deny_by_default: true
-          super_users:
-            - User:CN=kafka,O=Saiello,L=Rome,C=IT
-            - User:admin
 
         kafka_listeners:
 
@@ -179,6 +186,7 @@ provisioner:
           tls:
             enabled: true
             trustedCA:
+              type: PEM
               file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
               location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
             keystore:
@@ -208,5 +216,6 @@ provisioner:
         kafka_node_id: 6
       localhost:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
 verifier:
   name: ansible

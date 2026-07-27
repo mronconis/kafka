@@ -1,0 +1,42 @@
+---
+
+- name: Verify Kafka version
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ensure kafka running
+      ansible.builtin.shell: >
+        jcmd | awk '/^[0-9]+ kafka/ {print substr($3, 1, index($3, "/config") - 1)}'
+      register: kafka_running
+      when: not ansible_check_mode
+      become: true
+      changed_when: false
+
+    - name: Debug kafka running
+      ansible.builtin.debug:
+        msg: "Running kafka_home: {{ kafka_running.stdout }}"
+
+    - name: Set kafka_home from running instance
+      ansible.builtin.set_fact:
+        kafka_home: "{{ kafka_running.stdout }}"
+   
+    - name: Verify Kafka version
+      ansible.builtin.command: "{{ kafka_home }}/bin/kafka-topics.sh --version"
+      register: kafka_version
+      when: not ansible_check_mode
+      become: true
+
+    - name: Debug kafka version
+      ansible.builtin.debug:
+        msg: "Running kafka version: {{ kafka_version.stdout }}"
+    
+    - name: "Ensure kafka version is updated"
+      ansible.builtin.assert:
+        that:
+          - kafka_version.stdout == '3.7.0.redhat-00007'
+
+- name: Verify cluster status
+  import_playbook: ../../playbooks/verify.yml
+  vars:
+    kafka_home: /opt/kafka/kafka_2.13-3.7.0.redhat-00007

@@ -78,7 +78,7 @@
     backup: "{{ kafka_template_backup }}"
   become: true
   notify:
-    - Reload systemd
+    - Reload systemd kafka
     - Restart kafka
 
 - name: Create environment configuration file

@@ -4,3 +4,9 @@
     name: "{{ zookeeper_service_name }}"
     state: stopped
   become: true
+
+- name: Ensure Zookeeper is stopped
+  ansible.builtin.shell: jcmd | grep -i zookeeper
+  register: zookeeper_check
+  changed_when: false
+  failed_when: zookeeper_check.rc == 0

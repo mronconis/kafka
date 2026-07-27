@@ -1,8 +1,33 @@
 ---
-- name: Update a cluster
+- name: Upgrade a cluster
   hosts: all
   serial: 1
-  tasks:
-    - fail:
-        msg: Not yet implemented
-      when: true
+  
+  pre_tasks:
+
+    - name: Stop Zookeeper Service
+      include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: service_stopped.yml
+      when: 
+        - groups['zookeeper'] is defined
+        - inventory_hostname in groups['zookeeper']
+
+    - name: Stop Kafka Service
+      include_role:
+        name: kafka_systemd_broker
+        tasks_from: service_stopped.yml
+      when:
+        - groups['kafka'] is defined
+        - inventory_hostname in groups['kafka']
+
+    - name: Run Handlers
+      ansible.builtin.meta: flush_handlers
+
+  roles:
+    - kafka_install
+    - { role: kafka_systemd_zookeeper, when: not kafka_kraft_mode }
+    - kafka_systemd_broker
+      
+
+   

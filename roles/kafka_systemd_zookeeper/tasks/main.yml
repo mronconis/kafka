@@ -78,7 +78,7 @@
     backup: "{{ zookeeper_template_backup }}"
   become: true
   notify:
-    - Reload systemd
+    - Reload systemd zookeeper
     - Restart zookeeper
 
 - name: Add Zookeeper Environment file
@@ -114,7 +114,6 @@
     enabled: true
   when: not ansible_check_mode
   become: true
-
 
 - name: Run Handlers
   ansible.builtin.meta: flush_handlers

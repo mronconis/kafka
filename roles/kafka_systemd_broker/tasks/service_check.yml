@@ -12,5 +12,14 @@
   until: result.stdout == ''
   retries: 5
   delay: 10
-  when: not (ansible_check_mode or kafka_skip_verify_under_replicated)
+  when: not (ansible_check_mode or kafka_skip_verify_under_replicated_partitions)
+  become: true
+
+- name: Verify Kafka has no Unavailable partitions
+  ansible.builtin.command: "{{ __kafka_commands_topics }} --describe --unavailable-partitions"
+  register: result
+  until: result.stdout == ''
+  retries: 5
+  delay: 10
+  when: not (ansible_check_mode or kafka_skip_verify_unavailable_partitions)
   become: true

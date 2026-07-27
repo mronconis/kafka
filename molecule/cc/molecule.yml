@@ -5,7 +5,7 @@ prerun: false
 dependency:
   name: galaxy
 driver:
-  name: docker
+  name: podman
 lint: |
   ansible-lint -v
 platforms:
@@ -21,7 +21,7 @@ platforms:
     networks:
       - name: molecule
 
-  - name: machine6
+  - name: machine2
     image: registry.access.redhat.com/ubi8/ubi-init:latest
     pre_build_image: true
     privileged: true
@@ -33,6 +33,8 @@ platforms:
 
 provisioner:
   name: ansible
+  env:
+    ANSIBLE_COLLECTIONS_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.collections"
   ansible_args:
     - --diff
   playbooks:
@@ -43,7 +45,7 @@ provisioner:
     group_vars:
       all:
         amqstreams_enable: true
-        amqstreams_version: "2.9.1"
+        amqstreams_version: "2.9.4"
         kafka_prereqs_setup_openjdk_package_name: java-17-openjdk
 
         kafka_advertised_host: "{{ ansible_hostname }}"

@@ -29,7 +29,8 @@ kafka_server_properties_file_name: server.properties
 kafka_server_properties_file: "{{ kafka_home }}/config/{{ kafka_kraft_mode | ternary('kraft/', '') }}{{ kafka_server_properties_file_name }}"
 
 kafka_skip_verify_listening: false
-kafka_skip_verify_under_replicated: false
+kafka_skip_verify_under_replicated_partitions: false
+kafka_skip_verify_unavailable_partitions: false
 
 # Listeners
 kafka_advertised_interface_name: eth1

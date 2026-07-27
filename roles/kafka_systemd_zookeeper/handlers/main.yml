@@ -1,8 +1,11 @@
 ---
-- name: Reload systemd
+- name: Reload systemd zookeeper
   ansible.builtin.systemd:
     daemon_reload: true
   become: true
 
 - name: Restart zookeeper
   ansible.builtin.include_tasks: service_restarted.yml
+
+- name: Verify Zookeeper is listening
+  ansible.builtin.include_tasks: service_check.yml
