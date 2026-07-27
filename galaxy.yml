@@ -1,10 +1,11 @@
 ---
 namespace: saiello
 name: kafka
-version: 0.0.8
+version: 0.0.9
 readme: README.md
 authors:
   - Simone Aiello <saiello@redhat.com>
+  - Marco Ronconi <mronconi@redhat.com>
 description: Ansible collection to provision and manage Kafka and RedHat AMQ Streams
 license_file: LICENSE
 tags:

@@ -1,0 +1,10 @@
+- name: Run shared prepare
+  import_playbook: ../shared/prepare.yml
+
+- name: Setup the cluster
+  import_playbook: ../../playbooks/setup.yml
+
+- name: Verify cluster status
+  import_playbook: ../../playbooks/verify.yml
+  vars:
+    kafka_home: /opt/kafka/kafka_2.13-3.6.0.redhat-00005

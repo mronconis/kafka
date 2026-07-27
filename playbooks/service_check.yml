@@ -1,13 +1,23 @@
 ---
 - name: Check Services
   hosts: all
-  vars:
-    kafka_home: /opt/kafka/kafka_2.13-3.1.1
+  
   tasks:
+
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+
     - name: Check Zookeeper Service
       ansible.builtin.include_role:
         name: kafka_systemd_zookeeper
         tasks_from: service_check.yml
+
+    - name: Kafka prereqs
+      ansible.builtin.include_role:
+        name: kafka_systemd_broker
+        tasks_from: prereqs.yml
 
     - name: Ensure Admin 
       ansible.builtin.include_role:

@@ -1,0 +1,25 @@
+---
+# service check pre-upgrade
+- import_playbook: ../../playbooks/service_check.yml
+  vars:
+    kafka_home: /opt/kafka/kafka_2.13-3.6.0.redhat-00005
+
+# upgrade cluster
+- import_playbook: ../../playbooks/upgrade.yml
+  vars:
+    amqstreams_version: 2.7.0
+
+# verify cluster post-upgrade
+- import_playbook: ../../playbooks/verify.yml
+  vars:
+    kafka_home: /opt/kafka/kafka_2.13-3.7.0.redhat-00007
+
+# update cluster conf
+- import_playbook: ../../playbooks/update.yml
+  vars:
+    amqstreams_version: 2.7.0
+    kafka_home: /opt/kafka/kafka_2.13-3.7.0.redhat-00007
+    kafka_additional_conf:
+      num.partitions: 1
+      log.retention.hours: 148
+      inter.broker.protocol.version: 3.7

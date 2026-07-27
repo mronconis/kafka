@@ -5,47 +5,48 @@ prerun: false
 dependency:
   name: galaxy
 driver:
-  name: docker
+  name: podman
 lint: |
   ansible-lint -v
 platforms:
 
   - name: machine1
     image: registry.access.redhat.com/ubi8/ubi-init:latest
+    hostname: machine1
+    network: molecule
     pre_build_image: true
     privileged: true
     command: "/usr/sbin/init"
     groups:
       - kafka
       - zookeeper
-    networks:
-      - name: molecule
 
   - name: machine2
     image: registry.access.redhat.com/ubi8/ubi-init:latest
+    hostname: machine2
+    network: molecule
     pre_build_image: true
     privileged: true
     command: "/usr/sbin/init"
     groups:
       - kafka
       - zookeeper
-    networks:
-      - name: molecule
-
 
   - name: machine3
     image: registry.access.redhat.com/ubi8/ubi-init:latest
+    hostname: machine3
+    network: molecule
     pre_build_image: true
     privileged: true
     command: "/usr/sbin/init"
     groups:
       - kafka
       - zookeeper
-    networks:
-      - name: molecule
 
 provisioner:
   name: ansible
+  env:
+    ANSIBLE_COLLECTIONS_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.collections"
   ansible_args:
     - --diff
   playbooks:
@@ -55,10 +56,14 @@ provisioner:
   inventory:
     group_vars:
       all:
-        #kafka_home: /opt/kafka/kafka_2.13-3.1.1
+        amqstreams_version: "2.9.4" # last version with zookeeper support
+        amqstreams_enable: true
+        kafka_prereqs_setup_openjdk_package_name: java-17-openjdk
+        kafka_kraft_mode: false
+
         kafka_advertised_interface_name: eth0
         zookeeper_interface_name: eth0
-      
+
       kafka:
         kafka_advertised_host: "{{ ansible_hostname }}"
 
@@ -69,26 +74,17 @@ provisioner:
             - User:CN=kafka,O=Saiello,L=Rome,C=IT
             - User:CN=admin,O=Saiello,L=Rome,C=IT
 
-        certs_source_base: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/molecule/shared/certs"
-
         kafka_tls_config:
           enabled: true
           trustedCA:
-            file: "{{ certs_source_base }}/ca-root.pem"
+            type: PEM
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
             location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
           keystore:
-            file: "{{ certs_source_base }}/cert-cluster.p12"
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-cluster.p12"
             location: "{{ kafka_home }}/security/ansible_kafka-keystore.p12"
             password: changeit
             type: PKCS12
-
-        # kafka_tls_config:
-        #   enabled: true
-        #   trustedCA: /etc/certs/ca-root.pem
-        #   keystore:
-        #     location: /etc/certs/cert-cluster.p12
-        #     password: changeit
-        #     type: PKCS12
 
         kafka_listeners:
 
@@ -118,15 +114,17 @@ provisioner:
         
         kafka_admin:
           listener_name: admin
-          # authentication:
-          #   tls:
-          #     trustedCA: /etc/certs/ca-root.pem
-          #     keystore:
-          #       location: /etc/certs/cert-cluster.p12
-          #       password: changeit
-          #       type: PKCS12
-
-        kafka_skip_verify_under_replicated: true
+          tls:
+            enabled: true
+            trustedCA:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
+              location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
+              type: PEM
+            keystore:
+              file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-admin.p12"
+              location: "{{ kafka_home }}/security/ansible_admin-keystore.p12"
+              password: changeit
+              type: PKCS12
         
     host_vars:
       machine1:
