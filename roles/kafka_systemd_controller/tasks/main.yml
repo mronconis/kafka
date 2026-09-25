@@ -1,0 +1,24 @@
+- name: Configure Kafka Controller
+  include_role:
+    name: saiello.kafka.kafka_systemd_broker
+    tasks_from: "{{ tasks_from | default('main.yml') }}"
+  vars:
+    kafka_advertised_host: "{{ _controller_kafka_advertised_host | default(omit) }}"
+    kafka_listeners: "{{ _controller_kafka_listeners | default([]) }}"
+    kafka_admin: "{{ _controller_kafka_admin | default(omit) }}"
+    kafka_service_name: "{{ _controller_kafka_service_name | default('kafka-controller') }}"
+    kafka_server_properties_template: "{{ _controller_kafka_server_properties_template | default('kraft/controller.properties.j2') }}"
+    kafka_server_properties_file_name: "{{ _controller_kafka_server_properties_file_name | default('controller.properties') }}"
+    kafka_jaas_config_file_name: "{{ _controller_kafka_jaas_config_file_name | default('kafka-controller-jaas.conf') }}"
+    kafka_authorization: "{{ _controller_kafka_authorization | default(omit) }}"
+    kafka_additional_conf: "{{ _controller_kafka_additional_conf | default({}) }}"
+    kafka_log_dirs: "{{ _controller_kafka_log_dirs | default(omit) }}"
+    kafka_log4j_dir: "{{ _controller_kafka_log4j_dir | default(omit) }}"
+    kafka_skip_verify_listening: "{{ _controller_kafka_skip_verify_listening | default(false) }}"
+    kafka_skip_verify_under_replicated_partitions: "{{ _controller_kafka_skip_verify_under_replicated_partitions | default(true) }}"
+    kafka_skip_verify_unavailable_partitions: "{{ _controller_kafka_skip_verify_unavailable_partitions | default(true) }}"
+    kafka_metrics_enabled: "{{ _controller_kafka_metrics_enabled | default(false) }}"
+    kafka_metrics_port: "{{ _controller_kafka_metrics_port | default(omit) }}"
+    kafka_java_opts: "{{ _controller_kafka_java_opts | default([]) }}"
+    kafka_kraft_mode: True
+    kafka_kraft_role: controller

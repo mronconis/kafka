@@ -15,6 +15,7 @@ kafka_min_heap: 1G
 
 kafka_template_backup: yes
 kafka_zookeeper_servers_ansible_group: zookeeper
+kafka_zookeeper_migration_enabled: false
 
 kafka_broker_servers_ansible_group: broker
 kafka_controller_servers_ansible_group: controller
@@ -25,12 +26,20 @@ kafka_log_dirs:
 
 kafka_server_properties_template: server.properties.j2
 kafka_server_properties_file_name: server.properties
+kafka_server_properties_file: "{{ kafka_home }}/config/{{ (kafka_kraft_mode and (not kafka_microversion_is_v4)) | ternary('kraft/', '') }}{{ kafka_server_properties_file_name }}"
 
-kafka_server_properties_file: "{{ kafka_home }}/config/{{ kafka_kraft_mode | ternary('kraft/', '') }}{{ kafka_server_properties_file_name }}"
+kafka_log4j_properties_template: log4j.properties.j2
+kafka_log4j_properties_file_name: log4j.properties
+kafka_log4j_properties_file: "{{ kafka_home }}/config/{{ kafka_log4j_properties_file_name }}"
+kafka_log4j_root_logger_level: INFO
+kafka_log4j_debug_migration: false
 
 kafka_skip_verify_listening: false
 kafka_skip_verify_under_replicated_partitions: false
 kafka_skip_verify_unavailable_partitions: false
+kafka_skip_verify_produce_consume_data: true
+kafka_skip_verify_rf_and_min_isr: false
+kafka_verify_topic_replication_factor: 3
 
 # Listeners
 kafka_advertised_interface_name: eth1
@@ -42,7 +51,6 @@ kafka_listeners:
     tls: false
 
 kafka_inter_broker_listener_name: PLAINTEXT
-kafka_controller_listener_name: CONTROLLER
 kafka_admin_listener_name: PLAINTEXT
 
 kafka_jmx_enabled: false
@@ -51,19 +59,29 @@ kafka_jmx_management_port: 9990
 kafka_admin:
   listener_name: PLAINTEXT
 
-# Security
-kafka_jaas_config_file_location: "{{ kafka_home }}/config/kafka-jaas.conf"
-
-# GSSAPI
-kafka_kerberos_keytab_file: files/{{ inventory_name }}/keytabs/{{ ansible_hostname }}/kafka.keytab
-kafka_kerberos_keytab_location: "{{ kafka_home }}/security/ansible_kafka.keytab"
-
 kafka_additional_conf: {}
 
+# JAAS
 kafka_jaas_debug: false
+kafka_jaas_config_file_name: kafka-jaas.conf
+kafka_jaas_config_file_location: "{{ kafka_home }}/config/{{ kafka_jaas_config_file_name }}"
 
-kafka_kraft_mode: "{{ kafka_kraft_mode | default(false) }}"
+# GSSAPI
+kafka_kerberos_keytab_skip_copy: false
+kafka_kerberos_keytab_file: files/{{ inventory_name }}/keytabs/{{ ansible_hostname }}/kafka.keytab
+kafka_kerberos_keytab_location: "{{ kafka_home }}/security/ansible_kafka.keytab"
+kafka_kerberos_principal: "kafka/{{ ansible_facts['fqdn'] }}@EXAMPLE.REDHAT.COM"
 
-kafka_kraft_roles: "{{ group_names | intersect([kafka_broker_servers_ansible_group, kafka_controller_servers_ansible_group]) }}"
+# METRICS
+kafka_metrics_enabled: false
+kafka_metrics_port: 9404
+kafka_metrics_config_file: "{{kafka_home }}/config/kafka-metrics.yaml"
 
+# KRAFT
+kafka_kraft_mode: false
+kafka_kraft_role: broker
+kafka_controller_listener_name: CONTROLLER
+#kafka_controller_listener_port: 9090
 kafka_skip_setup_storage: true
+
+kafka_microversion_is_v4: false

@@ -17,9 +17,6 @@
 # update cluster conf
 - import_playbook: ../../playbooks/update.yml
   vars:
-    amqstreams_version: 2.7.0
     kafka_home: /opt/kafka/kafka_2.13-3.7.0.redhat-00007
-    kafka_additional_conf:
-      num.partitions: 1
-      log.retention.hours: 148
-      inter.broker.protocol.version: 3.7
+    kafka_inter_broker_protocol_version: 3.7
+

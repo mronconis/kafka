@@ -1,5 +1,4 @@
 ---
-
 - name:  Check role parameters
   block:
     - name: "Kafka Zookeeper mode"
@@ -13,7 +12,7 @@
     - name: "Kafka KRaft mode"
       ansible.builtin.assert:
         that:
-          - kafka_node_id is defined
+          - (kafka_node_id is defined) or (kafka_controller_id is defined)
           - kafka_cluster_id is defined
         quiet: true
       when:
@@ -47,4 +46,38 @@
 
 - name: Initialize kafka_java_opts
   ansible.builtin.set_fact:
-    kafka_java_opts: "{{ kafka_java_opts | default([]) }}"
+    _kafka_java_opts: "{{ kafka_java_opts | default([]) }}"
+
+- name: Find JMX prometheus javaagent file
+  ansible.builtin.find:
+    paths: "{{ kafka_home }}/libs"
+    file_type: file
+    patterns: "^jmx_prometheus_javaagent-.*.jar$"
+    use_regex: true
+  register: jmx_prometheus_javaagent_file_result
+  when:
+    - kafka_metrics_enabled
+    - kafka_metrics_agent_file is not defined
+  run_once: true
+  become: true
+
+- name: Set the javaagent jmx_prometheus_javaagent
+  ansible.builtin.set_fact:
+    _kafka_java_opts: "{{ _kafka_java_opts + [ '-javaagent:' + _kafka_metrics_agent_file + '=' + (kafka_metrics_port | string) + ':' + kafka_metrics_config_file ] }}"
+  vars:
+    _discovered_kafka_metrics_agent_file: "{{ jmx_prometheus_javaagent_file_result.files | default([]) | map(attribute='path') | first | default('') }}"
+    _kafka_metrics_agent_file: "{{ kafka_metrics_agent_file | default(_discovered_kafka_metrics_agent_file) }}"
+  when:
+    - kafka_metrics_enabled
+    - _kafka_metrics_agent_file | length > 0
+
+- name: Return Kafka microversion
+  ansible.builtin.command: "{{ kafka_home }}/bin/kafka-topics.sh --version"
+  register: __kafka_microversion
+  changed_when: false
+  become: true
+
+- name: Set kafka_microversion_is_v4
+  ansible.builtin.set_fact:
+    kafka_microversion_is_v4: "{{ (__kafka_microversion.stdout | regex_replace('\\.redhat-.*$', '')) is version('3.9.2', '>') }}"
+  when: not ansible_check_mode

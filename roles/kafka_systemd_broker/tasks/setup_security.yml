@@ -1,11 +1,4 @@
 ---
-- name: Add kafka_java_opts
-  ansible.builtin.set_fact:
-    kafka_java_opts: "{{ kafka_java_opts + [
-        '-Djava.security.auth.login.config=' + kafka_jaas_config_file_location
-      ] }}"
-  when: zookeeper_auth_type is defined
-
 - name: Create security dir for Kafka
   ansible.builtin.file:
     path: "{{ kafka_home }}/security"
@@ -55,6 +48,7 @@
       group: "{{ kafka_group }}"
       mode: 0400
   when:
+    - not kafka_kerberos_keytab_skip_copy
     - item.value.authentication.type is defined
     - item.value.authentication.type in 'gssapi'
   become: true

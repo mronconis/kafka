@@ -13,7 +13,7 @@
     state: directory
     owner: "{{ kafka_user }}"
     group: "{{ kafka_group }}"
-    mode: 0755
+    mode: 0750
   with_items:
     - "{{ kafka_home }}/config"
     - "{{ kafka_log4j_dir }}"
@@ -25,8 +25,7 @@
 
 - name: Set KRaft Facts
   ansible.builtin.include_tasks: set_kraft_facts.yml
-  when: 
-  - kafka_kraft_mode
+  when: kafka_kraft_mode or kafka_zookeeper_migration_enabled
 
 - name: Set Zookeeper Facts
   ansible.builtin.include_role:
@@ -56,9 +55,6 @@
   when: 
   - not kafka_kraft_mode
 
-- name: Debug Kakfa Java Ops
-  ansible.builtin.debug: var=kafka_java_opts
-
 - name: Debug Kafka zookeeper.connect.servers
   ansible.builtin.debug: var=kafka_zookeeper_connect_servers
   when: 
@@ -67,6 +63,16 @@
 - name: Setup security resources
   ansible.builtin.include_tasks: setup_security.yml
   with_items: "{{ __kafka_config.listeners | dict2items }}"
+
+- name: Add security options kafka_java_opts
+  ansible.builtin.set_fact:
+    _kafka_java_opts: "{{ _kafka_java_opts + [
+        '-Djava.security.auth.login.config=' + kafka_jaas_config_file_location
+      ] }}"
+  when: zookeeper_auth_type is defined
+  
+- name: Debug Kakfa Java Ops
+  ansible.builtin.debug: var=_kafka_java_opts
 
 - name: Create systemd unit file
   ansible.builtin.template:
@@ -101,6 +107,29 @@
   notify: Restart kafka
   become: true
 
+- name: Create log4j.properties configuration file
+  ansible.builtin.template:
+    src: "{{ kafka_log4j_properties_template }}"
+    dest: "{{ kafka_log4j_properties_file }}"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: 0400
+    backup: "{{ kafka_template_backup }}"
+  notify: Restart kafka
+  become: true
+  when: not kafka_microversion_is_v4
+
+- name: Setup Kafka Metrics configuration file
+  template:
+    src: kafka-metrics.yaml.j2
+    dest: "{{ kafka_metrics_config_file }}"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: 0400
+  when: kafka_metrics_enabled
+  notify: Restart kafka
+  become: true
+  
 - name: Ensure storage is formatted 
   ansible.builtin.include_tasks: setup_storage.yml
   when: 

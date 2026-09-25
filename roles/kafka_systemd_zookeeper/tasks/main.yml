@@ -27,7 +27,7 @@
     state: directory
     owner: "{{ zookeeper_user }}"
     group: "{{ zookeeper_group }}"
-    mode: 0775
+    mode: 0770
   become: true
 
 - name: Create Zookeeper {{ zookeeper_logs_dir }} folder
@@ -36,7 +36,7 @@
     state: directory
     owner: "{{ zookeeper_user }}"
     group: "{{ zookeeper_group }}"
-    mode: 0775
+    mode: 0770
   become: true
 
 # ---------------------------
@@ -44,7 +44,7 @@
 # ---------------------------
 - name: Initialize zookeeper_java_opts
   ansible.builtin.set_fact:
-    zookeeper_java_opts: "{{ zookeeper_java_opts | default([]) }}"
+    _zookeeper_java_opts: "{{ zookeeper_java_opts | default([]) }}"
 
 # ---------------------------
 # Prepare Configuration files
@@ -67,6 +67,9 @@
   
 - name: Set Zookeeper Servers Facts
   include_tasks: set_zk_facts.yml
+
+- name: Debug Zookeeper Java Ops
+  ansible.builtin.debug: var=_zookeeper_java_opts
 
 - name: Add Systemd service file
   ansible.builtin.template:
@@ -91,7 +94,6 @@
     mode: 0644
   notify: Restart zookeeper
   become: true
-
 
 - name: Add Zookeeper config file
   ansible.builtin.template:

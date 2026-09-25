@@ -9,9 +9,21 @@
   ansible.builtin.set_fact:
     controller_quorum_bootstrap_servers: []
 
+- name: Assert existence of controller listener '{{ kafka_controller_listener_name }}'
+  ansible.builtin.assert:
+    that:
+      - kafka_listeners is defined
+      - (kafka_listeners | selectattr('name', 'defined') | selectattr('name', 'eq', kafka_controller_listener_name) | list | length) > 0
+    fail_msg: "ERROR: Listener '{{ kafka_controller_listener_name }}' is missing from 'kafka_listeners' list."
+    success_msg: "Listener '{{ kafka_controller_listener_name }}' successfully validated."
+
+- name: Set kafka_controller_listener_port fact
+  ansible.builtin.set_fact:
+    kafka_controller_listener_port: "{{ (kafka_listeners | selectattr('name', 'eq', kafka_controller_listener_name) | map(attribute='port') | first) }}"
+
 - name: Set KRaft controller quorum facts
   ansible.builtin.set_fact:
-    controller_quorum_bootstrap_servers: "{{ controller_quorum_bootstrap_servers + [ hostvars[item]['ansible_facts']['fqdn'] + ':' + '9090' ] }}"
+    controller_quorum_bootstrap_servers: "{{ controller_quorum_bootstrap_servers + [ hostvars[item]['ansible_facts']['fqdn'] + ':' + (kafka_controller_listener_port | string) ] }}"
   with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
 
 - name: Debug KRaft controller quorum

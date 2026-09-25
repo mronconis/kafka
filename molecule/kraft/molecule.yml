@@ -116,7 +116,7 @@ provisioner:
 
       controller:
         
-        kafka_listeners:
+        _controller_kafka_listeners:
 
           - name: CONTROLLER
             port: 9090
@@ -124,19 +124,8 @@ provisioner:
             authentication:
               type: tls
         
-        # FIXME
-        kafka_admin:
-
-        kafka_additional_conf:
-          num.partitions: 1
-          log.retention.hours: 148
-
-        kafka_server_properties_template: kraft/controller.properties.j2
-        kafka_server_properties_file_name: controller.properties
-
-        kafka_skip_verify_listening: true
-        kafka_skip_verify_under_replicated_partitions: true
-        kafka_skip_verify_unavailable_partitions: true
+        _controller_kafka_admin:
+          listener_name: CONTROLLER
 
       broker:
 
@@ -200,13 +189,13 @@ provisioner:
 
     host_vars:
       machine1:
-        kafka_node_id: 1
+        kafka_controller_id: 1
         kafka_dir_id: 1IPhBz5sQEuxBCNR15oApA
       machine2:
-        kafka_node_id: 2
+        kafka_controller_id: 2
         kafka_dir_id: ZuzSytQ3TxaD-nj3l3LY_A
       machine3:
-        kafka_node_id: 3
+        kafka_controller_id: 3
         kafka_dir_id: AZN1GcFyT7GFUc9_vyVvLg
       machine4:
         kafka_node_id: 4

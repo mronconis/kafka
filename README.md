@@ -22,17 +22,18 @@ Plugins and modules within a collection may be tested with only specific Ansible
 * [kafka_install](https://github.com/saiello/kafka/blob/main/roles/kafka_install/README.md): download and install
 * [kafka_systemd_zookeeper](https://github.com/saiello/kafka/blob/main/roles/kafka_systemd_zookeeper/README.md): configure zookeeper systemd unit
 * [kafka_systemd_broker](https://github.com/saiello/kafka/blob/main/roles/kafka_systemd_broker/README.md): configure kafka broker systemd unit
+* [kafka_systemd_controller](https://github.com/saiello/kafka/blob/main/roles/kafka_systemd_controller/README.md): wraps the kafka_systemd_broker role for the controller
 * [cruise_control_install](https://github.com/saiello/kafka/blob/main/roles/cruise_control_install/README.md): download and install cruise control
 * [kafka_systemd_cruise_control](https://github.com/saiello/kafka/blob/main/roles/kafka_systemd_cruise_control/README.md): configure cruise control systemd
-
 
 ### Playbooks
 
 * [setup.yml](https://github.com/saiello/kafka/blob/main/playbooks/setup.yml): initial cluster setup
 * [update.yml](https://github.com/saiello/kafka/blob/main/playbooks/update.yml): configure a cluster performing a safe rolling update
-* [verify.yml](https://github.com/saiello/kafka/blob/main/playbooks/verify.yml): perform some check
+* [verify.yml](https://github.com/saiello/kafka/blob/main/playbooks/verify.yml): perform some checks
 * [restart.yml](https://github.com/saiello/kafka/blob/main/playbooks/restart.yml): restart a cluster
-* [upgrade.yml](https://github.com/saiello/kafka/blob/main/playbooks/upgrade.yml): upgrade a cluster increasing the kafka version
+* [upgrade.yml](https://github.com/saiello/kafka/blob/main/playbooks/upgrade.yml): upgrade a cluster increasing the
+* [migrate.yml](https://github.com/saiello/kafka/blob/main/playbooks/migrate.yml): migrate Zookeeper-based Kafka cluster
 
 ### Installing the collection
 

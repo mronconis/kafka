@@ -9,6 +9,8 @@
         name:
           - sudo
           - iproute
+          - less
+          - krb5-workstation
         state: present
 
     - name: Display Ansible version

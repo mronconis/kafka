@@ -1,6 +1,8 @@
 ---
-- name: Update a cluster
-  hosts: all
+- name: Update Zookeeper cluster
+  hosts: zookeeper
+  tags: 
+    - zookeeper
   serial: 1
   pre_tasks:
     - name: "Ensure kafka_home exists"
@@ -8,5 +10,33 @@
         that:
           - kafka_home is defined
   roles:
-    - { role: kafka_systemd_zookeeper, when: not kafka_kraft_mode }
-    - kafka_systemd_broker
+    - saiello.kafka.kafka_systemd_zookeeper
+
+- name: Update Kafka Controller
+  hosts: controller
+  tags: 
+    - controller
+  serial: 1
+  pre_tasks:
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+  roles:
+    - role: saiello.kafka.kafka_systemd_controller
+      when: kafka_kraft_role == 'controller'
+
+- name: Update Kafka Broker
+  hosts: kafka,broker
+  tags: 
+    - kafka
+    - broker
+  serial: 1
+  pre_tasks:
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+  roles:
+    - role: saiello.kafka.kafka_systemd_broker
+      when: kafka_kraft_role == 'broker'

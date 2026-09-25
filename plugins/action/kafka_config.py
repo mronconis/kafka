@@ -108,8 +108,11 @@ argument_config_spec = dict(
   kraft_controller_listener_name=dict(
     type='str'
   ),
-  kraft_roles=dict(
-    type='list'
+  kraft_role=dict(
+    type='str'
+  ),
+  zookeeper_migration_enabled=dict(
+    type='bool'
   )
 )
 
@@ -137,6 +140,7 @@ class ActionModule(ActionBase):
 
 class KafkaConfigGenerator():
 
+
   def __init__(self, config):
     self._config = config
 
@@ -145,7 +149,6 @@ class KafkaConfigGenerator():
 
     if validation_result.error_messages:
       raise ValueError(validation_result.error_messages)
-
 
 
   def _coalesce_listeners(self, listeners):
@@ -174,7 +177,6 @@ class KafkaConfigGenerator():
       if tls:
         listener['truststore_location'] = tls['trustedCA']['location']
         listener['truststore_type'] = tls['trustedCA']['type']
-        # listener['truststore_password'] = 
         
         listener['keystore_location'] = tls['keystore']['location']
         listener['keystore_password'] = tls['keystore']['password']
@@ -185,26 +187,32 @@ class KafkaConfigGenerator():
         authentication_type = authentication['type']
         authentication_config = authentication.pop('config', {})
         
-        jaas_login_module_args = ' \\\\n'.join(['{}="{}"'.rjust(9, ' ')
-          .format(k, v) for k, v in authentication_config.items()])
+        jaas_login_module_args = ' \\\n'.join(['  {}="{}"'.format(k, v) 
+          for k, v in authentication_config.items()])
 
         if authentication_type == 'tls':
           listener['ssl_client_auth'] = authentication_config.pop('tls_client_auth', 'required')
 
         if authentication_type in ['scram-sha-256', 'scram-sha-512']:
-          listener['sasl'] = {
-            authentication_type: authentication_config.pop('jaas_config', 'org.apache.kafka.common.security.scram.ScramLoginModule required;')
-          }
+          if authentication_config.items():
+            listener['sasl'] = {
+              authentication_type: authentication_config.pop('jaas_config', 'org.apache.kafka.common.security.scram.ScramLoginModule required \\\n{};'
+                .format(jaas_login_module_args))
+            }
+          else:
+            listener['sasl'] = {
+              authentication_type: authentication_config.pop('jaas_config', 'org.apache.kafka.common.security.scram.ScramLoginModule required;')
+            }
         
         if authentication_type in ['oauthbearer']:
           listener['sasl'] = {
-            authentication_type: authentication_config.pop('jaas_config', 'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required \\\\n{};'
+            authentication_type: authentication_config.pop('jaas_config', 'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required \\\n{};'
               .format(jaas_login_module_args))
           }
 
         if authentication_type in ['gssapi']:
           listener['sasl'] = {
-            authentication_type: authentication_config.pop('jaas_config', 'com.sun.security.auth.module.Krb5LoginModule required \\\\n{};'
+            authentication_type: authentication_config.pop('jaas_config', 'com.sun.security.auth.module.Krb5LoginModule required \\\n{};'
               .format(jaas_login_module_args))
           }
 
@@ -214,6 +222,7 @@ class KafkaConfigGenerator():
       listener_map[listener['name']] = listener
 
     return listener_map
+
 
   def _authorization_config(self):
     """Build the authorization config dictionary"""
@@ -229,6 +238,7 @@ class KafkaConfigGenerator():
       'allow.everyone.if.no.acl.found': 'false' if deny_by_default else 'true',
       'super.users': authorization.pop('super_users') # TODO set a default value if available
     }
+
 
   def get_kafka_config(self):
       listeners = self._config.pop('listeners', DEFAULT_LISTENERS)
@@ -249,25 +259,31 @@ class KafkaConfigGenerator():
 
       return config
 
+
   def _configure_listener(self, listener):
     kraft_mode = self._config['kraft_mode']
     kraft_controller_listener_name = self._config['kraft_controller_listener_name']
-    kraft_roles = self._config['kraft_roles']
+    kraft_role = self._config['kraft_role']
+    zookeeper_migration_enabled = self._config['zookeeper_migration_enabled']
     
-    if kraft_mode and len(kraft_roles) == 1 and listener['name'] == kraft_controller_listener_name:
-      return not 'broker' in kraft_roles 
+    if listener['name'] == kraft_controller_listener_name:
+      if kraft_mode and 'controller' == kraft_role:
+        return True
+    
+      if 'broker' == kraft_role:
+        return zookeeper_migration_enabled
 
     return True
 
+
   def get_admin_config(self, kafka_config):
-    admin = self._config.pop('admin')
+    admin = self._config.pop('admin', None)
     if admin is None:
       return {}
 
     allowed_listeners = kafka_config['listeners'].keys()
     listener_name = admin.pop('listener_name')
     
-
     if listener_name not in allowed_listeners:
       raise ValueError("Admin listener_name '%s' is invalid. Allowed values are: %s " % (listener_name, allowed_listeners))
 
@@ -328,5 +344,3 @@ class KafkaConfigGenerator():
       'require_command_config': bool(options),
       'options': options
     }
-
-

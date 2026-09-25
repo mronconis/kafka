@@ -7,13 +7,8 @@
 
 - name: Init Zookeeper servers facts
   ansible.builtin.set_fact:
-    zookeeper_address_fqdn: zookeeper_auth_type is defined and zookeeper_auth_type in 'gssapi'
+    zookeeper_address_fqdn: "{{ zookeeper_address_fqdn | default(zookeeper_auth_type is defined and zookeeper_auth_type in 'gssapi') | bool }}"
     zookeeper_servers: []
-
-- name: Print Zookeeper server address
-  ansible.builtin.debug:
-    var: zookeeper_address_fact
-    verbosity: 1
 
 - name: Set Zookeeper servers facts
   ansible.builtin.set_fact:

@@ -1,0 +1,17 @@
+- name: Run shared prepare
+  import_playbook: ../shared/prepare.yml
+
+- name: Setup the cluster
+  import_playbook: ../../playbooks/setup.yml
+
+- name: Verify cluster status
+  import_playbook: ../../playbooks/verify.yml
+  vars:
+    kafka_home: /opt/kafka/kafka_2.13-3.6.0.redhat-00005
+    kafka_skip_verify_produce_consume_data: false
+    kafka_verify_topic_replication_factor: 1
+
+# enable scram auth on replication listener: create scram user and update cluster conf
+# - import_playbook: ../../playbooks/update.yml
+#   vars:
+#     kafka_home: /opt/kafka/kafka_2.13-3.6.0.redhat-00005

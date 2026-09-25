@@ -16,7 +16,7 @@
 - name: Set initial controllers facts
   ansible.builtin.set_fact:
     initial_controllers: "{{ initial_controllers + 
-      [(hostvars[item]['kafka_node_id'] | string) + '@' + item + ':' + controller_port + ':' + hostvars[item]['kafka_dir_id']] }}"
+      [(hostvars[item].get('kafka_controller_id', hostvars[item].get('kafka_node_id')) | string) + '@' + item + ':' + controller_port + ':' + hostvars[item]['kafka_dir_id']] }}"
   with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
   run_once: true
     

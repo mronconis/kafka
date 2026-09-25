@@ -1,0 +1,9 @@
+---
+- name: Setup Kafka cluster
+  hosts: kafka,zookeeper
+  roles:
+    - kafka_install
+    - role: kafka_systemd_zookeeper
+      when: not kafka_kraft_mode
+    - kafka_systemd_broker
+

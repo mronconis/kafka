@@ -1,0 +1,6 @@
+---
+- name: Verify cluster status
+  import_playbook: ../../playbooks/verify.yml
+  vars:
+    kafka_skip_zookeeper_verify: true
+    kafka_home: /opt/kafka/kafka_2.13-3.9.2.redhat-00007
