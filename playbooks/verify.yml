@@ -2,31 +2,37 @@
 - name: Verify ZooKeeper quorum
   hosts: zookeeper
   tasks:
-    - name: Check Zookeeper Service
-      include_role:
-        name: kafka_systemd_zookeeper
-        tasks_from: service_check.yml
+    - name: Zookeeper checks
+      when: not (kafka_skip_zookeeper_verify | default(false))
+      block:
+      - name: Check Zookeeper Service
+        include_role:
+          name: kafka_systemd_zookeeper
+          tasks_from: service_check.yml
 
-    - name: Verify Zookeeper node
-      include_role:
-        name: kafka_systemd_zookeeper
-        tasks_from: verify.yml
+      - name: Verify Zookeeper node
+        include_role:
+          name: kafka_systemd_zookeeper
+          tasks_from: verify.yml
 
 - name: Verify Kafka cluster
-  hosts: kafka
+  hosts: kafka,broker
   tasks:
-    - name: Kafka prereqs
-      ansible.builtin.include_role:
-        name: kafka_systemd_broker
-        tasks_from: prereqs.yml
-        public: true
+    - name: Zookeeper checks
+      when: not (kafka_skip_broker_verify | default(false))
+      block:
+      - name: Kafka prereqs
+        ansible.builtin.include_role:
+          name: kafka_systemd_broker
+          tasks_from: prereqs.yml
+          public: true
 
-    - name: Check Kafka Service
-      include_role:
-        name: kafka_systemd_broker
-        tasks_from: service_check.yml
-      
-    - name: Verify Kafka topic/partition
-      include_role:
-        name: kafka_systemd_broker
-        tasks_from: verify.yml
+      - name: Check Kafka Service
+        include_role:
+          name: kafka_systemd_broker
+          tasks_from: service_check.yml
+        
+      - name: Verify Kafka topic/partition
+        include_role:
+          name: kafka_systemd_broker
+          tasks_from: verify.yml

@@ -97,6 +97,7 @@
     owner:  "{{ kafka_user }}"
     group:  "{{ kafka_group }}"
   become: true
+  when: not ansible_check_mode
 
 - name: Check kafka home
   ansible.builtin.stat:
@@ -113,6 +114,7 @@
       - __kafka_home.stat.exists
     quiet: true
     fail_msg: "Kafka home directory has not been created: {{ kafka_home }}."
+  when: not ansible_check_mode
 
 - name: Return Kafka microversion
   ansible.builtin.command: "{{ kafka_home }}/bin/kafka-topics.sh --version"
@@ -124,6 +126,7 @@
   when:
     - __kafka_microversion is defined
     - __kafka_microversion.stdout is defined
+    - not ansible_check_mode
   block:
     - name: "Kafka version is: {{ kafka_version }}"
       ansible.builtin.assert:

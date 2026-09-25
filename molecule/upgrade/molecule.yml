@@ -43,6 +43,14 @@ platforms:
       - kafka
       - zookeeper
 
+scenario:
+  test_sequence:
+    - create
+    - prepare
+    - converge
+    - verify
+    - destroy
+    
 provisioner:
   name: ansible
   env:
@@ -109,7 +117,7 @@ provisioner:
         kafka_additional_conf:
           num.partitions: 1
           log.retention.hours: 148
-          inter.broker.protocol.version: 3.6
+          inter.broker.protocol.version: "{{ kafka_inter_broker_protocol_version | default('3.6') }}"
 
         kafka_inter_broker_listener_name: replication
         

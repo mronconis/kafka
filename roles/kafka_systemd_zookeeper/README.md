@@ -1,4 +1,4 @@
-Zookeeper Systemd Role
+Kafka Zookeeper Systemd Role
 ====================
 
 tbc

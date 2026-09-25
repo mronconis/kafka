@@ -1,0 +1,25 @@
+---
+- name: Dynamically adds hosts to kraft ansible groups
+  hosts: zookeeper,kafka
+  gather_facts: false
+  tasks:
+    - name: Add zookeeper hosts to controller group
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        groups:
+          - controller
+      loop: "{{ groups['zookeeper'] | default([]) }}"
+      run_once: true
+    
+    - name: Add kafka hosts to broker group
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        groups:
+          - broker
+      loop: "{{ groups['kafka'] | default([]) }}"
+      run_once: true
+
+- import_playbook: ../../playbooks/migrate.yml
+  vars:
+    kafka_log4j_debug_migration: true
+    kafka_home: /opt/kafka/kafka_2.13-3.9.2.redhat-00007

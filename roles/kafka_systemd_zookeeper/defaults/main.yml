@@ -30,7 +30,17 @@ zookeeper_auth_client_enabled: false
 zookeeper_jaas_config_file_location: "{{ kafka_home }}/config/zookeeper-jaas.conf"
 
 # GSSAPI
+zookeeper_kerberos_keytab_skip_copy: false
 zookeeper_kerberos_keytab_file: files/{{ inventory_name }}/keytabs/{{ ansible_hostname }}/zookeeper.keytab
 zookeeper_kerberos_keytab_location: "{{ kafka_home }}/security/ansible_zookeeper.keytab"
+zookeeper_kerberos_principal: "zookeeper/{{ ansible_facts['fqdn'] }}@EXAMPLE.REDHAT.COM"
+zookeeper_kerberos_jaas_login_renew: 3600000
+zookeeper_kerberos_service_principal: "zookeeper/_HOST"
+zookeeper_kerberos_remove_host_from_principal: true
+zookeeper_kerberos_remove_realm_from_principal: true
 
 zookeeper_jaas_debug: false
+
+zookeeper_metrics_provider_enabled: false
+zookeeper_metrics_provider_class_name: org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider
+zookeeper_metrics_provider_http_port: 7000

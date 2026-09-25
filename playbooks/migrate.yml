@@ -1,0 +1,278 @@
+---
+# phase1: Deploy the KRaft controller quorum
+# - Retrieve the Kafka cluster ID using the zookeeper-shell tool if not defined
+# - Install a KRaft controller quorum to the cluster
+- name: Migrate ZK to KRaft - Enable pre-migration
+  hosts: controller
+  tags: phase1
+  pre_tasks:
+
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+
+    - name: Set Zookeeper Facts
+      ansible.builtin.include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: set_zk_facts.yml
+        public: true
+    
+    - name: Set Cluster ID
+      ansible.builtin.include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: set_cluster_id.yml
+        public: true
+      when: kafka_cluster_id is undefined
+
+    - name: "Ensure kafka_cluster_id exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_cluster_id is defined
+
+  roles:
+  
+    - role: saiello.kafka.kafka_systemd_controller
+      vars:
+        kafka_skip_setup_storage: false
+        kafka_zookeeper_migration_enabled: true
+
+  post_tasks:
+
+    - name: Verify Kafka migration state transition in controller log
+      ansible.builtin.command:
+        cmd: "grep 'NONE to PRE_MIGRATION' {{ _controller_kafka_log4j_dir }}/controller.log"
+      register: kafka_migration_check
+      changed_when: false
+      until: kafka_migration_check.rc == 0
+      retries: 30
+      delay: 10
+      failed_when: kafka_migration_check.rc != 0
+
+    - name: Debug matched controller log entry
+      ansible.builtin.debug:
+        msg: "{{ kafka_migration_check.stdout_lines | last }}"
+      when: not ansible_check_mode
+      
+# phase2: Enable migration on brokers (metadata migration in progress) 
+# - Enable migration on each broker
+- name: Migrate ZK to KRaft - Enable migration
+  hosts: broker
+  serial: 1
+  tags: phase2
+  pre_tasks:
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+  roles:
+    - role: saiello.kafka.kafka_systemd_broker
+      vars:
+        kafka_zookeeper_migration_enabled: true
+
+# phase2: Enable migration on brokers (metadata migration in progress)
+# - Confirm that metadata migration is complete
+- name: Migrate ZK to KRaft - Verify enabled migration
+  hosts: controller
+  tags: phase2
+  pre_tasks:
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+
+    - name: Set Zookeeper Facts
+      ansible.builtin.include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: set_zk_facts.yml
+        public: true
+  tasks:
+    - name: Verify Kafka migration state transition in controller log
+      ansible.builtin.command:
+        cmd: "grep 'PRE_MIGRATION to MIGRATION' {{ _controller_kafka_log4j_dir }}/controller.log"
+      register: kafka_migration_check
+      changed_when: false
+      until: kafka_migration_check.rc == 0
+      retries: 30
+      delay: 10
+      failed_when: kafka_migration_check.rc != 0
+
+    - name: Debug matched controller log entry
+      ansible.builtin.debug:
+        msg: "{{ kafka_migration_check.stdout_lines | last }}"
+      when: not ansible_check_mode
+
+    - name: Fetch Information about the active KRaft controller
+      ansible.builtin.shell: >-
+        {{ kafka_home }}/bin/zookeeper-shell.sh {{ zookeeper_address_fqdn | ternary(ansible_facts['fqdn'], ansible_facts[zookeeper_interface_name].ipv4.address) }}:{{ zookeeper_client_port | default(2181) }} get /migration
+      register: kafka_kraft_ctrl_info
+      changed_when: false
+
+    - name: Extract active KRaft controller ID
+      ansible.builtin.set_fact:
+        active_kraft_controller_id: "{{ (kafka_kraft_ctrl_info.stdout_lines | select('search', 'kraft_controller_id') | first | from_json).kraft_controller_id }}"
+      when: not ansible_check_mode
+
+    - name: Display active KRaft controller ID
+      ansible.builtin.debug:
+        msg: "Il controller KRaft attivo è il node.id: {{ active_kraft_controller_id }}"  
+      when: not ansible_check_mode
+
+    - name: Verify Kafka migration complete in controller log
+      ansible.builtin.command:
+        cmd: "grep 'Completing migration of ZooKeeper metadata to KRaft' {{ _controller_kafka_log4j_dir }}/controller.log"
+      register: kafka_migration_complete
+      changed_when: false
+      until: kafka_migration_complete.rc == 0
+      retries: 30
+      delay: 10
+      failed_when: kafka_migration_complete.rc != 0
+      when: 
+        - active_kraft_controller_id is defined
+        - kafka_controller_id | int == active_kraft_controller_id | int
+
+    - name: Debug matched controller log entry
+      ansible.builtin.debug:
+        msg: "{{ kafka_migration_complete.stdout_lines | last }}"
+      when: 
+        - active_kraft_controller_id is defined
+        - kafka_controller_id | int == active_kraft_controller_id | int
+        - not ansible_check_mode
+
+# phase3: Restart brokers in full KRaft mode
+# - Switch each broker to KRaft mode
+- name: Migrate ZK to KRaft - Switch broker to KRaft mode
+  hosts: broker
+  serial: 1
+  tags: phase3
+
+  pre_tasks:
+
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+
+    - name: Set Zookeeper Facts
+      ansible.builtin.include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: set_zk_facts.yml
+        public: true
+      run_once: true
+    
+    - name: Set Cluster ID
+      ansible.builtin.include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: set_cluster_id.yml
+        public: true
+      when: kafka_cluster_id is undefined
+
+    - name: "Ensure kafka_cluster_id exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_cluster_id is defined
+      
+    - name: Stop broker
+      ansible.builtin.include_role:
+        name: kafka_systemd_broker
+        tasks_from: service_stopped.yml
+        public: true
+
+    - name: Purge non-KRaft compatible configurations from kafka_additional_conf
+      ansible.builtin.set_fact:
+        kafka_additional_conf: "{{ kafka_additional_conf | dict2items | rejectattr('key', 'in', keys_to_remove) | items2dict }}"
+      vars:
+        keys_to_remove:
+          - inter.broker.protocol.version
+          - control.plane.listener.name
+      when: kafka_additional_conf is defined
+
+  roles:
+
+    - role: saiello.kafka.kafka_systemd_broker
+      vars:
+        kafka_kraft_mode: true
+        kafka_zookeeper_migration_enabled: false
+        kafka_server_properties_template: kraft/broker.properties.j2
+        kafka_server_properties_file_name: broker.properties
+
+# phase4: Finalize migration (controllers exit migration mode), after that you cannot roll back to ZooKeeper.
+# - Switch each controller out of migration mode
+- name: Migrate ZK to KRaft - Finalize migration
+  hosts: controller
+  serial: 1
+  tags: phase4
+
+  pre_tasks:
+
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+
+    - name: Set Zookeeper Facts
+      ansible.builtin.include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: set_zk_facts.yml
+        public: true
+
+    - name: Set Cluster ID
+      ansible.builtin.include_role:
+        name: kafka_systemd_zookeeper
+        tasks_from: set_cluster_id.yml
+        public: true
+      when: kafka_cluster_id is undefined
+
+    - name: "Ensure kafka_cluster_id exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_cluster_id is defined
+
+  roles:
+  
+    - role: saiello.kafka.kafka_systemd_controller
+      vars:
+        kafka_skip_setup_storage: true
+        kafka_zookeeper_migration_enabled: false
+
+# phase4: Finalize migration (controllers exit migration mode), after that you cannot roll back to ZooKeeper.
+# - Verify that the controller has exited migration mode
+- name: Migrate ZK to KRaft - Verify migration completion
+  hosts: controller
+  tags: phase4
+      
+  tasks:
+
+    - name: Verify Kafka migration state transition in controller log
+      ansible.builtin.command:
+        cmd: "grep 'MIGRATION to POST_MIGRATION' {{ _controller_kafka_log4j_dir }}/controller.log"
+      register: kafka_migration_check
+      changed_when: false
+      until: kafka_migration_check.rc == 0
+      retries: 30
+      delay: 10
+      failed_when: kafka_migration_check.rc != 0
+
+    - name: Debug matched controller log entry
+      ansible.builtin.debug:
+        msg: "{{ kafka_migration_check.stdout_lines | last }}"
+      when: not ansible_check_mode
+
+# phase5: ZooKeeper can be decommissioned if it is not needed for other services.
+# - Stop and disable zookeeper systemd unit 
+- name: Decommission Zookeeper
+  hosts: zookeeper
+  tags: phase5
+  tasks:
+    - name: Stop Zookeeper Service
+      include_role:
+        name: saiello.kafka.kafka_systemd_zookeeper
+        tasks_from: service_stopped.yml
+        public: true
+  
+    - name: Disable zookeeper
+      ansible.builtin.systemd:
+        name: "{{ zookeeper_service_name }}"
+        enabled: false
+      when: not ansible_check_mode
+      become: true

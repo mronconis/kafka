@@ -6,7 +6,26 @@
   become: true
 
 - name: Ensure Kafka is stopped
-  ansible.builtin.shell: jcmd | grep -i kafka
+  ansible.builtin.shell: jcmd | grep -w "kafka.Kafka"
   register: kafka_check
   changed_when: false
   failed_when: kafka_check.rc == 0
+  when: not kafka_kraft_mode
+
+- name: Ensure Kafka Controller is stopped
+  ansible.builtin.shell: jcmd | grep -w "kafka.Kafka" | grep "controller.properties"
+  register: kafka_check
+  changed_when: false
+  failed_when: kafka_check.rc == 0
+  when:
+    - kafka_kraft_mode
+    - kafka_kraft_role == 'controller'
+
+- name: Ensure Kafka Broker is stopped
+  ansible.builtin.shell: jcmd | grep -w "kafka.Kafka" | grep -E "(broker|server)\.properties"
+  register: kafka_check
+  changed_when: false
+  failed_when: kafka_check.rc == 0
+  when:
+    - kafka_kraft_mode
+    - kafka_kraft_role == 'broker'

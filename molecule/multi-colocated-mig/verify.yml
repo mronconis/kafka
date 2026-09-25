@@ -1,0 +1,25 @@
+---
+- name: Extract kafka_home
+  hosts: kafka,broker
+  tasks:
+    - name: Ensure kafka running
+      ansible.builtin.shell: >
+        jcmd | awk '/(server|broker)\.properties/ {print substr($3, 1, index($3, "/config") - 1)}'
+      register: kafka_running
+      when: not ansible_check_mode
+      become: true
+      changed_when: false
+
+    - name: Debug kafka running
+      ansible.builtin.debug:
+        msg: "Running kafka_home: {{ kafka_running.stdout }}"
+
+    - name: Set kafka_home from running instance
+      ansible.builtin.set_fact:
+        kafka_home: "{{ kafka_running.stdout }}"
+      
+- name: Verify cluster status
+  import_playbook: ../../playbooks/verify.yml
+  vars:
+    kafka_skip_zookeeper_verify: true
+    kafka_skip_verify_produce_consume_data: false

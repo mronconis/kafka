@@ -1,22 +1,31 @@
 # {{ ansible_managed }}
 
-node.id={{ kafka_node_id }}
+node.id={{ kafka_controller_id | default(kafka_node_id) }}
 
-process.roles={{ kafka_kraft_roles | join(',') }}
+process.roles={{ kafka_kraft_role }}
 
+{% if kafka_zookeeper_migration_enabled | default(false) %}
 listener.security.protocol.map={{ __kafka_config.core['listener.security.protocol.map'] }}
-listeners={{ __kafka_config.core['listeners'] }}
-advertised.listeners={{ __kafka_config.core['advertised.listeners'] }}
+{% else %}
+listener.security.protocol.map={{ __kafka_config.core['listener.security.protocol.map'].split(',') | select('search', kafka_controller_listener_name ~ ':') | join(',') }}
+{% endif %}
+listeners={{ __kafka_config.core['listeners'].split(',') | select('search', kafka_controller_listener_name ~ ':') | join(',') }}
+
+{% if kafka_zookeeper_migration_enabled | default(false) %}
+# Enable Zookeeper to KRaft migration
+inter.broker.listener.name={{ kafka_inter_broker_listener_name }}
+zookeeper.metadata.migration.enable=true
+zookeeper.connect={{ zookeeper_servers | map(attribute='address') | zip(zookeeper_servers | map(attribute='client_port')) | map('join', ':') | join(',') }}
+{% endif %}
 
 controller.listener.names={{ kafka_controller_listener_name }}
 
-controller.quorum.bootstrap.servers={{ controller_quorum_bootstrap_servers| join(',') }}
+controller.quorum.bootstrap.servers={{ controller_quorum_bootstrap_servers | join(',') }}
 
 log.dirs={{ kafka_log_dirs | join(',') }}
 
 {% for l_name, l_config in __kafka_config.listeners.items() %}
-
-{% if l_config.tls %}
+{% if l_config.tls | default(false) %}
 # ---- {{ l_name }} -----
 listener.name.{{ l_name | lower }}.ssl.truststore.location={{ l_config.truststore_location }}
 listener.name.{{ l_name | lower }}.ssl.truststore.type={{ l_config.truststore_type }}
@@ -27,7 +36,6 @@ listener.name.{{ l_name | lower }}.ssl.keystore.type={{ l_config.keystore_type }
 listener.name.{{ l_name | lower }}.ssl.client.auth={{ l_config.ssl_client_auth }}
 {% endif %}
 {% endif %}
-
 {% if 'sasl' in l_config %}
 listener.name.{{ l_name | lower }}.sasl.enabled.mechanisms={{ l_config.sasl.keys() | map('upper') | join(',') }}
 {% if 'gssapi' in l_config.authentication.type %}
@@ -40,7 +48,6 @@ listener.name.{{ l_name | lower }}.{{ sasl_mechanism }}.sasl.jaas.config={{ sasl
 sasl.mechanism.inter.broker.protocol={{ l_config.authentication.type | upper }}
 {% endif %}
 {% endif %}
-
 {% endfor %}
 
 {% if __kafka_config.authorization %}
@@ -52,4 +59,3 @@ super.users = {{ __kafka_config.authorization['super.users'] | join(';') }}
 {% for kafka_conf_key, kafka_conf_value in __kafka_config.additional_config.items() %}
 {{ kafka_conf_key }}={{ kafka_conf_value }}
 {% endfor %}
-

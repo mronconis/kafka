@@ -1,7 +1,28 @@
 ---
-- name: Setup a cluster
-  hosts: all
+
+- name: Setup ZooKeeper Controller
+  hosts: zookeeper
+  tags: 
+    - zookeeper
   roles:
-    - kafka_install
-    - { role: kafka_systemd_zookeeper, when: not kafka_kraft_mode }
-    - kafka_systemd_broker
+    - saiello.kafka.kafka_install
+    - saiello.kafka.kafka_systemd_zookeeper
+
+- name: Setup Kafka Controller
+  hosts: controller
+  tags: 
+    - controller
+  roles:
+    - saiello.kafka.kafka_install
+    - role: saiello.kafka.kafka_systemd_controller
+      when: kafka_kraft_role == 'controller'
+
+- name: Setup Kafka Broker
+  hosts: kafka,broker
+  tags: 
+    - kafka
+    - broker
+  roles:
+    - saiello.kafka.kafka_install
+    - role: saiello.kafka.kafka_systemd_broker
+      when: kafka_kraft_role == 'broker'

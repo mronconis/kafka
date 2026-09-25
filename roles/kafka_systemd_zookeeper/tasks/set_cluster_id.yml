@@ -1,0 +1,26 @@
+- name: Fetch ZooKeeper cluster ID
+  vars:
+    zk_host: "{{ groups[zookeeper_servers_ansible_group][0] }}"
+  block:
+    - name: Execute zookeeper-shell command for /cluster/id znode
+      ansible.builtin.command:
+        cmd: "{{ zookeeper_home }}/bin/zookeeper-shell.sh {{ zookeeper_address_fqdn | ternary(hostvars[zk_host]['ansible_facts']['fqdn'], hostvars[zk_host]['ansible_facts'][zookeeper_interface_name].ipv4.address) }}:{{ zookeeper_client_port }} get /cluster/id"
+      register: zk_raw_output
+      changed_when: false
+      check_mode: false
+
+    - name: Parse cluster ID from ZooKeeper JSON response
+      ansible.builtin.set_fact:
+        kafka_cluster_id: "{{ (zk_raw_output.stdout | regex_search('{\"version\":.*}') | from_json).id }}"
+     
+  delegate_to: "{{ zk_host }}"
+  run_once: true
+
+- name: Propagate Kafka cluster ID to controller hosts
+  ansible.builtin.set_fact:
+    kafka_cluster_id: "{{ hostvars[groups[zookeeper_servers_ansible_group][0]]['kafka_cluster_id'] }}"
+  when: inventory_hostname in groups['controller']
+
+- name: Print Zookeeper cluster ID
+  ansible.builtin.debug:
+    msg: "ZooKeeper cluster ID: {{ kafka_cluster_id }}"

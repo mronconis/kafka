@@ -1,0 +1,165 @@
+---
+- name: Run shared prepare
+  import_playbook: ../shared/prepare.yml
+
+- name: Prepare /etc/hosts for all machines
+  hosts: all
+  gather_facts: true
+  vars:
+    domain_suffix: "example.redhat.com"
+  tasks:
+    - name: Add host entries with FQDN
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        unsafe_writes: true
+        marker: "# {mark} ANSIBLE MANAGED MOLECULE HOSTS"
+        block: |
+          {% for host in groups['all'] %}
+          {{ hostvars[host]['ansible_default_ipv4']['address'] }} {{ hostvars[host]['ansible_facts']['fqdn'] }} {{ host }}
+          {% endfor %}
+   
+- name: Prepare Kerberos machine
+  hosts: kdc
+  vars:
+    realm: EXAMPLE.REDHAT.COM
+    kdc_hostname: kdc.example.redhat.com
+  tasks:
+    - name: Install Kerberos packages
+      ansible.builtin.dnf:
+        name:
+          - krb5-server
+          - krb5-libs
+        state: present
+
+    - name: Deploy krb5.conf
+      ansible.builtin.copy:
+        dest: /etc/krb5.conf
+        content: |
+          [libdefaults]
+          default_realm = {{ realm }}
+          dns_lookup_realm = false
+          dns_lookup_kdc = false
+          rdns = false
+
+          [realms]
+          {{ realm }} = {
+              kdc = {{ kdc_hostname }}
+              admin_server = {{ kdc_hostname }}
+              max_renewable_life = 7d 0h 0m 0s
+          }
+
+    - name: Deploy /var/kerberos/krb5kdc/kdc.conf
+      ansible.builtin.copy:
+        dest: /var/kerberos/krb5kdc/kdc.conf
+        content: |
+          [kdcdefaults]
+          kdc_ports = 88
+          kdc_tcp_ports = 88
+
+          [realms]
+          {{ realm }} = {
+              master_key_type = aes256-cts
+              acl_file = /var/kerberos/krb5kdc/kadm5.acl
+              dict_file = /usr/share/dict/words
+              admin_keytab = /var/kerberos/krb5kdc/kadm5.keytab
+              supported_enctypes = aes256-cts:normal aes128-cts:normal
+          }
+
+    - name: Initialize Kerberos KDC Database
+      ansible.builtin.shell: |
+        kdb5_util create -s -P 123456
+      args:
+        creates: /var/kerberos/krb5kdc/principal
+
+    - name: Create directory /etc/krb5kdc
+      ansible.builtin.file:
+        path: /etc/krb5kdc
+        state: directory
+        mode: '0755'
+
+    - name: Create Kerberos admin user and keytab
+      ansible.builtin.shell: |
+        kadmin.local -q "addprinc -pw admin kadmin/admin"
+        kadmin.local -q "ktadd -k /etc/krb5kdc/kadm5.keytab kadmin/admin"
+      args:
+        creates: /etc/krb5kdc/kadm5.keytab
+
+    - name: Start Kerberos services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - krb5kdc
+        - kadmin
+      ignore_errors: true
+
+    - name: Start KDC binary directly (fallback for non-systemd containers)
+      ansible.builtin.command: krb5kdc
+      args:
+        creates: /var/kerberos/krb5kdc/krb5kdc.pid
+      failed_when: false
+
+    - name: Create Kerberos Users and Keytabs for Kafka and ZooKeeper
+      ansible.builtin.shell: |
+        kadmin.local -q "addprinc -pw 123456 -kvno 0 {{ item.0 }}/{{ item.1 }}.example.redhat.com@{{ realm }}"
+        kadmin.local -q "ktadd -k /tmp/{{ item.0 }}-{{ item.1 }}.keytab {{ item.0 }}/{{ item.1 }}.example.redhat.com@{{ realm }}"
+      args:
+        creates: "/tmp/{{ item.0 }}-{{ item.1 }}.keytab"
+      loop: >-
+        {{
+          (['zookeeper'] | product(groups['zookeeper'] | default([])) | list)
+          +
+          (['kafka'] | product((groups['zookeeper'] | default([]) + groups['kafka'] | default([])) | unique) | list)
+        }}
+
+    - name: Ensure local keytabs directory exists in /tmp
+      ansible.builtin.file:
+        path: /tmp/keytabs
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+
+    - name: Fetch generated keytabs to local /tmp
+      ansible.builtin.fetch:
+        src: "/tmp/{{ item.0 }}-{{ item.1 }}.keytab"
+        dest: "/tmp/keytabs/{{ item.0 }}-{{ item.1 }}.keytab"
+        flat: true
+      loop: >-
+        {{
+          (['zookeeper'] | product(groups['zookeeper'] | default([])) | list)
+          +
+          (['kafka'] | product((groups['zookeeper'] | default([]) + groups['kafka'] | default([])) | unique) | list)
+        }}
+
+- name: Prepare Kafka machine
+  hosts: kafka,zookeeper
+  vars:
+    realm: EXAMPLE.REDHAT.COM
+    kdc_hostname: kdc.example.redhat.com
+  tasks:
+    - name: Deploy krb5.conf
+      ansible.builtin.copy:
+        dest: /etc/krb5.conf
+        content: |
+          [libdefaults]
+          default_realm = {{ realm }}
+          dns_lookup_realm = false
+          dns_lookup_kdc = false
+          ticket_lifetime = 24h
+          renew_lifetime = 7d
+          forwardable = true
+          rdns = false
+          udp_preference_limit = 1
+
+          [realms]
+          {{ realm }} = {
+              kdc = {{ kdc_hostname }}
+              admin_server = {{ kdc_hostname }}
+              max_renewable_life = 7d 0h 0m 0s
+          }
+          
+          [domain_realm]
+          .example.redhat.com = {{ realm | default('EXAMPLE.REDHAT.COM') }}
+          example.redhat.com = {{ realm | default('EXAMPLE.REDHAT.COM') }}

@@ -1,33 +1,52 @@
----
-- name: Upgrade a cluster
-  hosts: all
-  serial: 1
-  
-  pre_tasks:
 
+- name: Upgrade ZooKeeper Controller
+  hosts: zookeeper
+  tags: 
+    - zookeeper
+  serial: 1
+  pre_tasks:
     - name: Stop Zookeeper Service
       include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: service_stopped.yml
-      when: 
-        - groups['zookeeper'] is defined
-        - inventory_hostname in groups['zookeeper']
-
-    - name: Stop Kafka Service
-      include_role:
-        name: kafka_systemd_broker
-        tasks_from: service_stopped.yml
-      when:
-        - groups['kafka'] is defined
-        - inventory_hostname in groups['kafka']
-
     - name: Run Handlers
       ansible.builtin.meta: flush_handlers
-
   roles:
-    - kafka_install
-    - { role: kafka_systemd_zookeeper, when: not kafka_kraft_mode }
-    - kafka_systemd_broker
-      
+    - saiello.kafka.kafka_install
+    - saiello.kafka.kafka_systemd_zookeeper
 
-   
+- name: Upgrade Kafka Controller
+  hosts: controller
+  tags: 
+    - controller
+  serial: 1
+  pre_tasks:
+    - name: Stop Kafka Controller Service
+      include_role:
+        name: saiello.kafka.kafka_systemd_controller
+      vars:
+        tasks_from: service_stopped.yml
+    - name: Run Handlers
+      ansible.builtin.meta: flush_handlers
+  roles:
+    - saiello.kafka.kafka_install
+    - role: saiello.kafka.kafka_systemd_controller
+      when: kafka_kraft_role == 'controller'
+
+- name: Upgrade Kafka Broker
+  hosts: kafka,broker
+  tags: 
+    - kafka
+    - broker
+  serial: 1
+  pre_tasks:
+    - name: Stop Kafka Broker Service
+      include_role:
+        name: saiello.kafka.kafka_systemd_broker
+        tasks_from: service_stopped.yml
+    - name: Run Handlers
+      ansible.builtin.meta: flush_handlers
+  roles:
+    - saiello.kafka.kafka_install
+    - role: saiello.kafka.kafka_systemd_broker
+      when: kafka_kraft_role == 'broker'

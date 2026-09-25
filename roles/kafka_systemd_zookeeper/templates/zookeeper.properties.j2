@@ -2,6 +2,9 @@
 
 dataDir={{ zookeeper_data_path }}
 clientPort={{ zookeeper_client_port }}
+{% if zookeeper_client_address != (ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0])) %}
+clientPortAddress={{ zookeeper_client_address }}
+{% endif %}
 
 tickTime=2000
 initLimit=10
@@ -29,10 +32,10 @@ quorum.cnxn.threads.size=20
 
 {% if 'gssapi' in zookeeper_auth_type %}
 # Can be adjusted to suit ticket renewal intervals. Default is one hour.
-jaasLoginRenew=3600000
-kerberos.removeHostFromPrincipal=false
-kerberos.removeRealmFromPrincipal=false
-quorum.auth.kerberos.servicePrincipal=zookeeper/_HOST
+jaasLoginRenew={{ zookeeper_kerberos_jaas_login_renew }}
+kerberos.removeHostFromPrincipal={{ zookeeper_kerberos_remove_host_from_principal | ternary('true', 'false') }}
+kerberos.removeRealmFromPrincipal={{ zookeeper_kerberos_remove_realm_from_principal | ternary('true', 'false') }}
+quorum.auth.kerberos.servicePrincipal={{ zookeeper_kerberos_service_principal }}
 {% endif %}
 
 {% endif %}
@@ -44,4 +47,9 @@ requireClientAuthScheme=sasl
 {% for zookeeper_server in zookeeper_servers %}
 authProvider.{{ zookeeper_server.myid }}=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
 {% endfor %}
+{% endif %}
+
+{%- if zookeeper_metrics_provider_enabled %}
+metricsProvider.className={{ zookeeper_metrics_provider_class_name }}
+metricsProvider.httpPort={{ zookeeper_metrics_provider_http_port }}
 {% endif %}

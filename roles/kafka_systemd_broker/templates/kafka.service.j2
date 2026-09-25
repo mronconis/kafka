@@ -16,7 +16,7 @@ LimitNPROC={{ kafka_service_limit_nproc }}
 LimitMEMLOCK={{ kafka_service_limit_mem_lock }}
 
 ExecStart={{ kafka_home }}/bin/kafka-server-start.sh {{ kafka_server_properties_file }}
-ExecStop={{ kafka_home }}/bin/kafka-server-stop.sh
+ExecStop={{ kafka_home }}/bin/kafka-server-stop.sh --process-role={{ kafka_kraft_role }}
 
 TimeoutStopSec={{ kafka_service_timeout_stop_sec }}
 SuccessExitStatus=143

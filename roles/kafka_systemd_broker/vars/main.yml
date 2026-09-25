@@ -9,8 +9,9 @@ __kafka_input_config:
   additional_config: "{{ kafka_additional_conf }}"
   admin: "{{ kafka_admin }}"
   kraft_mode: "{{ kafka_kraft_mode }}"
+  kraft_role: "{{ kafka_kraft_role }}"
   kraft_controller_listener_name: "{{ kafka_controller_listener_name }}"
-  kraft_roles: "{{ kafka_kraft_roles }}"
+  zookeeper_migration_enabled: "{{ kafka_zookeeper_migration_enabled }}"
 
 __kafka_admin_config: "{{ kafka_home }}/config/admin.properties"
 __kafka_storage_config: "{{ kafka_home }}/config/kraft/{{ kafka_server_properties_file_name }}"
@@ -29,4 +30,4 @@ __kafka_commands_consumer: "{{ __kafka_commands_bin }}/kafka-console-consumer.sh
 
 __kafka_commands_storage: "{{ __kafka_commands_bin }}/kafka-storage.sh"
 __kafka_storage_info_opts: "info --config {{ __kafka_storage_config }}"
-__kafka_storage_format_opts: "format --config {{ __kafka_storage_config }} --cluster-id {{ kafka_cluster_id }} --ignore-formatted"
+__kafka_storage_format_opts: "format --config {{ __kafka_storage_config }} --cluster-id={{ kafka_cluster_id }} --ignore-formatted"
