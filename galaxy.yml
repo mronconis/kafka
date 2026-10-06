@@ -28,3 +28,6 @@ build_ignore:
   - "*.tgz"
   - "*.zip"
   - venv
+  - .venv
+  - .collections
+  - examples

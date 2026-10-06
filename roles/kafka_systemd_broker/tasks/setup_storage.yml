@@ -1,8 +1,9 @@
 ---
-- name: "Ensure controller dir id exists"
+- name: "Ensure controller ids exists"
   ansible.builtin.assert:
     that:
       - hostvars[item]['kafka_dir_id'] is defined
+      - hostvars[item]['kafka_controller_id'] is defined
     quiet: true
   with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
   run_once: true

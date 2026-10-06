@@ -12,7 +12,7 @@
     - name: "Kafka KRaft mode"
       ansible.builtin.assert:
         that:
-          - (kafka_node_id is defined) or (kafka_controller_id is defined)
+          - ((kafka_node_id is defined) or (kafka_broker_id is defined) or (kafka_controller_id is defined))
           - kafka_cluster_id is defined
         quiet: true
       when:
@@ -42,7 +42,7 @@
       Allowed values are: {{ __kafka_config.listeners.values() }}
     quiet: true
   when: (not kafka_kraft_mode) or 
-        (kafka_kraft_mode and kafka_broker_servers_ansible_group in group_names)
+        (kafka_kraft_mode and kafka_kraft_role == 'broker')
 
 - name: Initialize kafka_java_opts
   ansible.builtin.set_fact:

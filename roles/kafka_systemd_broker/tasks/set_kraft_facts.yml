@@ -23,8 +23,9 @@
 
 - name: Set KRaft controller quorum facts
   ansible.builtin.set_fact:
-    controller_quorum_bootstrap_servers: "{{ controller_quorum_bootstrap_servers + [ hostvars[item]['ansible_facts']['fqdn'] + ':' + (kafka_controller_listener_port | string) ] }}"
+    controller_quorum_bootstrap_servers: "{{ controller_quorum_bootstrap_servers + [ (hostvars[item]['_controller_kafka_advertised_host'] | default(hostvars[item]['kafka_advertised_host'])) + ':' + (kafka_controller_listener_port | string) ] }}"
   with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
+  run_once: true
 
 - name: Debug KRaft controller quorum
   ansible.builtin.debug:

@@ -18,7 +18,7 @@
 
 - name: Topic fault tollerance checks (RF > 1 and MinISR < RF)
   run_once: true
-  when: not (ansible_check_mode or kafka_skip_verify_rf_and_min_isr)
+  when: not (ansible_check_mode or (kafka_skip_verify_rf_and_min_isr | bool))
   block:
     - name: Fetch Kafka topic descriptions
       ansible.builtin.command:
@@ -64,11 +64,11 @@
         fail_msg: >-
           ERROR: Non-fault-tolerant topics detected with ReplicationFactor <= 1:
           {{ kafka_single_replica_topics }}
-      when: kafka_verify_topic_replication_factor > 1
+      when: (kafka_verify_topic_replication_factor | int) > 1
 
 - name: End to end data flow verification
   run_once: true
-  when: not (ansible_check_mode or kafka_skip_verify_produce_consume_data)
+  when: not (ansible_check_mode or (kafka_skip_verify_produce_consume_data | bool))
   block:
     - name: Create test topic
       ansible.builtin.command:

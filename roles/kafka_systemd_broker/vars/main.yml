@@ -8,6 +8,7 @@ __kafka_input_config:
   listeners: "{{ kafka_listeners }}"
   additional_config: "{{ kafka_additional_conf }}"
   admin: "{{ kafka_admin }}"
+  inter_broker_listener_name: "{{ kafka_inter_broker_listener_name }}"
   kraft_mode: "{{ kafka_kraft_mode }}"
   kraft_role: "{{ kafka_kraft_role }}"
   kraft_controller_listener_name: "{{ kafka_controller_listener_name }}"
