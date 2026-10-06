@@ -1,0 +1,40 @@
+_controller_kafka_advertised_interface_name: 'eth0'
+_controller_kafka_advertised_host: "{{ ansible_facts[_controller_kafka_advertised_interface_name].ipv4.address }}"
+
+_controller_kafka_inter_broker_listener_name: PLAINTEXT
+
+_controller_kafka_kerberos_keytab_skip_copy: false
+_controller_kafka_kerberos_keytab_file: files/{{ inventory_name }}/keytabs/{{ ansible_hostname }}/kafka.keytab
+_controller_kafka_kerberos_keytab_location: "{{ kafka_home }}/security/ansible_kafka.keytab"
+_controller_kafka_kerberos_principal: "kafka/{{ ansible_facts['fqdn'] }}@EXAMPLE.REDHAT.COM"
+
+_controller_kafka_java_opts: []
+_controller_kafka_max_heap: '1G'
+_controller_kafka_min_heap: '1G'
+
+_controller_kafka_skip_verify_listening: false
+_controller_kafka_skip_verify_under_replicated_partitions: true
+_controller_kafka_skip_verify_unavailable_partitions: true
+
+_controller_kafka_server_properties_template: 'kraft/controller.properties.j2'
+_controller_kafka_server_properties_file_name: 'controller.properties'
+_controller_kafka_jaas_config_file_name: 'kafka-controller-jaas.conf'
+
+_controller_kafka_service_name: 'kafka-controller'
+_controller_kafka_service_after:
+  - syslog.target
+  - network-online.target
+  
+_controller_kafka_metrics_enabled: false
+_controller_kafka_metrics_port: 9405
+
+_controller_kafka_log4j_dir: /var/log/kafka-controller
+
+_controller_kafka_log_dirs:
+  - /var/data/kafka-controller
+
+_controller_kafka_admin:
+  listener_name: PLAINTEXT
+
+_controller_kafka_service_limit_mem_lock: infinity
+_controller_kafka_service_standard_output: journal
