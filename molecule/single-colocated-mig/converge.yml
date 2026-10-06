@@ -60,4 +60,3 @@
     kafka_inter_broker_protocol_version: 3.9
     kafka_log4j_debug_migration: true
     kafka_home: /opt/kafka/kafka_2.13-3.9.2.redhat-00007
-

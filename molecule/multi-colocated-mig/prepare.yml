@@ -9,4 +9,3 @@
   vars:
     kafka_home: /opt/kafka/kafka_2.13-3.6.0.redhat-00005
     kafka_skip_verify_produce_consume_data: false
-
