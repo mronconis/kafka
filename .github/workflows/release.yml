@@ -1,0 +1,109 @@
+---
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  validate:
+    name: Validate tag matches galaxy.yml
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      collection_tarball: ${{ steps.version.outputs.tarball }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract and validate version
+        id: version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          GALAXY_VERSION=$(grep '^version:' galaxy.yml | awk '{print $2}')
+
+          echo "Tag version:    ${TAG_VERSION}"
+          echo "Galaxy version: ${GALAXY_VERSION}"
+
+          if [ "${TAG_VERSION}" != "${GALAXY_VERSION}" ]; then
+            echo "::error::Tag version (${TAG_VERSION}) does not match galaxy.yml version (${GALAXY_VERSION})"
+            exit 1
+          fi
+
+          echo "version=${GALAXY_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tarball=saiello-kafka-${GALAXY_VERSION}.tar.gz" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build collection
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: pip install ansible-core
+
+      - name: Build collection
+        run: ansible-galaxy collection build .
+
+      - name: Verify tarball exists
+        run: ls -lh "${{ needs.validate.outputs.collection_tarball }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: collection-tarball
+          path: "${{ needs.validate.outputs.collection_tarball }}"
+
+  github-release:
+    name: GitHub Release
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: collection-tarball
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ needs.validate.outputs.version }}"
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: "${{ needs.validate.outputs.collection_tarball }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # galaxy-publish:
+  #   name: Publish to Ansible Galaxy
+  #   needs: [validate, build]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: collection-tarball
+
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
+
+  #     - name: Install Ansible
+  #       run: pip install ansible-core
+
+  #     - name: Publish to Ansible Galaxy
+  #       run: >-
+  #         ansible-galaxy collection publish
+  #         --api-key "${{ secrets.ANSIBLE_GALAXY_TOKEN }}"
+  #         "${{ needs.validate.outputs.collection_tarball }}"
