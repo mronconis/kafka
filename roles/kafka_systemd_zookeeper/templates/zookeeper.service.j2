@@ -1,6 +1,6 @@
 [Unit]
 Description=zookeeper
-After=syslog.target network.target
+After={{ zookeeper_service_after | join(' ') }}
 
 
 [Service]

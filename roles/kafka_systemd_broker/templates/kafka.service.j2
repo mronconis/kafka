@@ -1,6 +1,6 @@
 [Unit]
 Description=Apache Kafka
-After=syslog.target network.target
+After={{ kafka_service_after | join(' ') }}
 
 
 [Service]
@@ -23,6 +23,7 @@ SuccessExitStatus=143
 Restart=on-failure
 RestartSec=5s
 
+StandardOutput={{ kafka_service_standard_output | default('null', true) }}
 
 [Install]
 WantedBy=multi-user.target
