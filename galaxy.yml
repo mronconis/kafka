@@ -15,8 +15,9 @@ tags:
   - streams
   - amq
   - kraft
-dependencies:
-  middleware_automation.redhat_csp_download: ">=1.2.2"
+# deprecated
+# dependencies:
+#   middleware_automation.redhat_csp_download: ">=1.2.2"
 repository: https://github.com/saiello/kafka
 documentation: https://github.com/saiello/kafka
 homepage: https://github.com/saiello/kafka
