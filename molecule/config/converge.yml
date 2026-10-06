@@ -113,13 +113,3 @@
          - "'oauthbearer' in item.value.authentication.type"
       with_items:
         - "{{ __kafka_config.listeners | dict2items }}"
-      
-
-     
-
-
-
-
-    
-
-
