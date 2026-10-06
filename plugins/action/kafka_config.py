@@ -102,6 +102,9 @@ argument_config_spec = dict(
       authentication=authentication_spec
     )
   ),
+  inter_broker_listener_name=dict(
+    type='str'
+  ),
   kraft_mode=dict(
     type='bool'
   ),
@@ -186,9 +189,11 @@ class KafkaConfigGenerator():
         authentication = listener['authentication']
         authentication_type = authentication['type']
         authentication_config = authentication.pop('config', {})
-        
-        jaas_login_module_args = ' \\\n'.join(['  {}="{}"'.format(k, v) 
-          for k, v in authentication_config.items()])
+
+        jaas_login_module_args = ' \\\n'.join([
+          '  {}={}'.format(k, str(v).lower()) if isinstance(v, bool) else '  {}="{}"'.format(k, v)
+          for k, v in authentication_config.items()
+        ])
 
         if authentication_type == 'tls':
           listener['ssl_client_auth'] = authentication_config.pop('tls_client_auth', 'required')
@@ -232,9 +237,16 @@ class KafkaConfigGenerator():
     
     authorization = self._config['authorization']
     deny_by_default = authorization.pop('deny_by_default', True)
-    
+    kraft_mode = self._config['kraft_mode']
+
+    authorizer_class_name = (
+      'org.apache.kafka.metadata.authorizer.StandardAuthorizer'
+      if kraft_mode
+      else 'kafka.security.authorizer.AclAuthorizer'
+    )
+
     return {
-      'authorizer.class.name': 'kafka.security.authorizer.AclAuthorizer', # TODO use proper class according to kafka version
+      'authorizer.class.name': authorizer_class_name,
       'allow.everyone.if.no.acl.found': 'false' if deny_by_default else 'true',
       'super.users': authorization.pop('super_users') # TODO set a default value if available
     }
@@ -261,17 +273,19 @@ class KafkaConfigGenerator():
 
 
   def _configure_listener(self, listener):
-    kraft_mode = self._config['kraft_mode']
+    inter_broker_listener_name = self._config['inter_broker_listener_name']
     kraft_controller_listener_name = self._config['kraft_controller_listener_name']
-    kraft_role = self._config['kraft_role']
-    zookeeper_migration_enabled = self._config['zookeeper_migration_enabled']
+    role = self._config['kraft_role']
+    name = listener['name']
     
-    if listener['name'] == kraft_controller_listener_name:
-      if kraft_mode and 'controller' == kraft_role:
-        return True
-    
-      if 'broker' == kraft_role:
-        return zookeeper_migration_enabled
+    if name == inter_broker_listener_name and role == 'controller':
+      return False
+
+    if name == kraft_controller_listener_name:
+      if role == 'controller':
+          return True
+      if role == 'broker':
+          return self._config['zookeeper_migration_enabled']
 
     return True
 
