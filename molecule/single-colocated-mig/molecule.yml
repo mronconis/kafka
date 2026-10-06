@@ -18,10 +18,8 @@ platforms:
     privileged: true
     command: "/usr/sbin/init"
     groups:
-      # MIG: rimuovere 'zookeeper' terminato il processo di migrazione
       - zookeeper
       - kafka
-      # MIG: aggiungiere prima di avviare il processo di migrazione
       #- controller
       #- broker
 
@@ -51,7 +49,6 @@ provisioner:
         amqstreams_enable: true
         kafka_prereqs_setup_openjdk_package_name: java-17-openjdk
         
-        # MIG: aggiungiere prima di avviare il processo di migrazione
         #kafka_cluster_id: _losvMygQRypghTtcrkn2Q
 
       zookeeper:
@@ -62,9 +59,9 @@ provisioner:
         zookeeper_java_opts:
           - -Dzookeeper.admin.serverAddress=127.0.0.1
       
-      # MIG: aggiungiere prima di avviare il processo di migrazione
       controller:
 
+        _controller_kafka_advertised_interface_name: eth0
         _controller_kafka_advertised_host: "{{ ansible_hostname }}"
         
         _controller_kafka_admin:
@@ -75,22 +72,12 @@ provisioner:
           - name: CONTROLLER
             port: 9091
             tls: false
-            # abilitare dopo aver creato l'utente scram
-            # authentication:
-            #   type: scram-sha-512
-            #   config:
-            #     username: kafka
-            #     password: kafka
 
           - name: INTER
             port: 9092
             tls: false
-            # abilitare dopo aver creato l'utente scram
-            # authentication:
-            #   type: scram-sha-512
-            #   config:
-            #     username: kafka
-            #     password: kafka
+
+        _controller_kafka_inter_broker_listener_name: INTER
 
         _controller_kafka_log_dirs:
           - /var/data/kafka-controller
@@ -98,7 +85,6 @@ provisioner:
         _controller_kafka_log4j_dir: /var/log/kafka-controller
       
       kafka:
-        # MIG: aggiungiere prima di avviare il processo di migrazione impostando il flag a 'false', impostarlo a 'true' terminato il processo di migrazione
         kafka_kraft_mode: false
 
         kafka_advertised_host: "{{ ansible_hostname }}"
@@ -112,16 +98,9 @@ provisioner:
 
         kafka_admin:
           listener_name: INTER
-          # abilitare dopo aver creato l'utente scram
-          # authentication:
-          #   type: scram-sha-512
-          #   config:
-          #     username: kafka
-          #     password: kafka
 
         kafka_listeners:
 
-          # MIG: aggiungiere prima di avviare il processo di migrazione
           - name: CONTROLLER
             port: 9091
             tls: false
@@ -129,12 +108,6 @@ provisioner:
           - name: INTER
             port: 9092
             tls: false
-            # abilitare dopo aver creato l'utente scram
-            # authentication:
-            #   type: scram-sha-512
-            #   config:
-            #     username: kafka
-            #     password: kafka
 
           - name: SCRAM
             port: 9093
@@ -150,23 +123,14 @@ provisioner:
           transaction.state.log.min.isr: 1
           transaction.state.log.replication.factor: 1
           offsets.topic.replication.factor: 1
-          # MIG: rimuovere terminato il processo di migrazione
           inter.broker.protocol.version: "{{ kafka_inter_broker_protocol_version | default('3.6') }}"
-          # abilitare dopo aver creato l'utente scram
-          #sasl.mechanism: SCRAM-SHA-512
 
         kafka_inter_broker_listener_name: INTER
-        
-        # MIG: aggiungiere terminato il processo di migrazione
-        #kafka_server_properties_template: kraft/broker.properties.j2
-        #kafka_server_properties_file_name: broker.properties
 
     host_vars:
       machine1:
         kafka_broker_id: 1
         zookeeper_myid: 1
-        # MIG: aggiungiere prima di avviare il processo di migrazione
-        kafka_node_id: 1
         kafka_controller_id: 2
         kafka_dir_id: ZuzSytQ3TxaD-nj3l3LY_A
       localhost:

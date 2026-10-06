@@ -28,9 +28,7 @@ platforms:
     privileged: true
     command: "/usr/sbin/init"
     groups:
-      # MIG: rimuovere terminato il processo di migrazione
       - zookeeper
-      # MIG: aggiungiere prima di phase1
       #- controller
 
   - name: machine2
@@ -41,9 +39,7 @@ platforms:
     privileged: true
     command: "/usr/sbin/init"
     groups:
-      # MIG: rimuovere terminato il processo di migrazione
       - zookeeper
-      # MIG: aggiungiere prima di phase1
       #- controller
 
   - name: machine3
@@ -54,9 +50,7 @@ platforms:
     privileged: true
     command: "/usr/sbin/init"
     groups:
-      # MIG: rimuovere terminato il processo di migrazione
       - zookeeper
-      # MIG: aggiungiere prima di phase1
       #- controller
 
   - name: machine4
@@ -68,7 +62,6 @@ platforms:
     command: "/usr/sbin/init"
     groups:
       - kafka
-      # MIG: aggiungiere prima di phase1
       #- broker
 
   - name: machine5
@@ -80,7 +73,6 @@ platforms:
     command: "/usr/sbin/init"
     groups:
       - kafka
-      # MIG: aggiungiere prima di phase1
       #- broker
 
   - name: machine6
@@ -92,7 +84,6 @@ platforms:
     command: "/usr/sbin/init"
     groups:
       - kafka
-      # MIG: aggiungiere prima di phase1
       #- broker
 
   - name: machine7
@@ -104,7 +95,6 @@ platforms:
     command: "/usr/sbin/init"
     groups:
       - kafka
-      # MIG: aggiungiere prima di phase1
       #- broker
 
 scenario:
@@ -133,22 +123,16 @@ provisioner:
         amqstreams_enable: true
         kafka_prereqs_setup_openjdk_package_name: java-17-openjdk
         
-        # MIG: aggiungiere prima di phase1
         #kafka_cluster_id: pc_ZVChNRl-UL8AKO7hGbg
-
+        
         # moved from zk group to all
         zookeeper_interface_name: eth0
         zookeeper_auth_type: gssapi
 
-        # moved from kafka group to all
-        kafka_kerberos_keytab_skip_copy: false
-        kafka_kerberos_keytab_file: /tmp/keytabs/kafka-{{ ansible_hostname }}.keytab
-        kafka_inter_broker_listener_name: REPLICATION
-
       zookeeper:
         # moved to all
-        #zookeeper_interface_name: eth0
-        #zookeeper_auth_type: gssapi
+        # zookeeper_interface_name: eth0
+        # zookeeper_auth_type: gssapi
         zookeeper_auth_quorum_enabled: true
         zookeeper_auth_client_enabled: true
 
@@ -168,13 +152,13 @@ provisioner:
         
         zookeeper_metrics_provider_enabled: false
 
-      # MIG: aggiungiere prima di phase1
       controller:
 
+        _controller_kafka_advertised_interface_name: eth0
         _controller_kafka_advertised_host: "{{ ansible_facts['fqdn'] }}"
         
-        _controller_kafka_admin:
-          listener_name: CONTROLLER
+        _controller_kafka_kerberos_keytab_skip_copy: false
+        _controller_kafka_kerberos_keytab_file: /tmp/keytabs/kafka-{{ ansible_hostname }}.keytab
 
         _controller_kafka_listeners:
 
@@ -202,6 +186,11 @@ provisioner:
                 keyTab: "{{ kafka_kerberos_keytab_location }}"
                 principal: "{{ kafka_kerberos_principal }}"
 
+        _controller_kafka_admin:
+          listener_name: CONTROLLER
+
+        _controller_kafka_inter_broker_listener_name: REPLICATION
+
         _controller_kafka_log_dirs:
           - /var/data/kafka-controller
 
@@ -210,16 +199,17 @@ provisioner:
         _controller_kafka_metrics_enabled: true
         _controller_kafka_metrics_port: 9405
         
+        _controller_kafka_service_limit_mem_lock: 4294967296
+        _controller_kafka_service_standard_output: null
+
       kafka:
-        # MIG: aggiungiere prima di phase1 impostato a 'false' e impostare a 'true' terminato il processo di migrazione
         kafka_kraft_mode: false
 
         kafka_advertised_host: "{{ ansible_facts['fqdn'] }}"
         kafka_advertised_interface_name: eth0
 
-        # moved to all
-        # kafka_kerberos_keytab_skip_copy: false
-        # kafka_kerberos_keytab_file: /tmp/keytabs/kafka-{{ ansible_hostname }}.keytab
+        kafka_kerberos_keytab_skip_copy: false
+        kafka_kerberos_keytab_file: /tmp/keytabs/kafka-{{ ansible_hostname }}.keytab
 
         kafka_authorization:
           type: simple
@@ -229,7 +219,6 @@ provisioner:
             - User:admin
 
         kafka_listeners:
-          # MIG: aggiungere prima di phase1
           - name: CONTROLLER
             port: 9092
             tls: false
@@ -274,7 +263,6 @@ provisioner:
 
         kafka_additional_conf:
           auto.create.topics.enable: 'false'
-          # MIG: rimuovere terminato il processo di migrazione
           control.plane.listener.name: CONTROL
           zookeeper.set.acl: 'true'
           metric.reporters: com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter
@@ -286,10 +274,10 @@ provisioner:
           cruise.control.metrics.reporter.sasl.kerberos.service.name: kafka
           cruise.control.metrics.reporter.sasl.jaas.config: >-
             com.sun.security.auth.module.Krb5LoginModule required
-            debug="False"
-            useKeyTab="True"
-            storeKey="True"
-            doNotPrompt="False"
+            debug="false"
+            useKeyTab="true"
+            storeKey="true"
+            doNotPrompt="false"
             keyTab="{{ kafka_kerberos_keytab_location }}"
             principal="{{ kafka_kerberos_principal }}";
           cruise.control.metrics.reporter.bootstrap.servers: "machine4.example.redhat.com:9090,machine5.example.redhat.com:9090,machine6.example.redhat.com:9090,machine7.example.redhat.com:9090"
@@ -300,11 +288,9 @@ provisioner:
           group.initial.rebalance.delay.ms: 3000
           default.replication.factor: 4
           broker.rack: "{{ kafka_rack }}"
-          # MIG: rimuovere terminato il processo di migrazione
           inter.broker.protocol.version: "{{ kafka_inter_broker_protocol_version | default('3.6') }}"
 
-        # moved to all
-        #kafka_inter_broker_listener_name: REPLICATION
+        kafka_inter_broker_listener_name: REPLICATION
         
         kafka_admin:
           listener_name: CONTROL
@@ -327,47 +313,33 @@ provisioner:
         kafka_metrics_port: 9404
         
         kafka_service_limit_mem_lock: 4294967296
-
-        # MIG: aggiungiere terminato il processo di migrazione
-        #kafka_server_properties_template: kraft/broker.properties.j2
-        #kafka_server_properties_file_name: broker.properties
+        kafka_service_standard_output: null
 
     host_vars:
       machine1:
         zookeeper_myid: 1
-        # aggiungiere prima di phase1
         kafka_controller_id: 5
         kafka_dir_id: UPjB-xIARYOIvYhEt3NI3A
       machine2:
         zookeeper_myid: 2
-        # aggiungiere prima di phase1
         kafka_controller_id: 6
         kafka_dir_id: gqrLT8V_TdKOqCAfDtg7pA
       machine3:
         zookeeper_myid: 3
-        # aggiungiere prima di phase1
         kafka_controller_id: 7
         kafka_dir_id: vR674QBBT8C9kbODdU1naw
       machine4:
         kafka_broker_id: 1
         kafka_rack: dc-1
-        # aggiungiere prima di phase1
-        kafka_node_id: 1
       machine5:
         kafka_broker_id: 2
         kafka_rack: dc-1
-        # aggiungiere prima di phase1
-        kafka_node_id: 2
       machine6:
         kafka_broker_id: 3
         kafka_rack: dc-2
-        # aggiungiere prima di phase1
-        kafka_node_id: 3
       machine7:
         kafka_broker_id: 4
         kafka_rack: dc-2
-        # aggiungiere prima di phase1
-        kafka_node_id: 4
       localhost:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
 

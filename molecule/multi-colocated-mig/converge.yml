@@ -61,16 +61,3 @@
     kafka_inter_broker_protocol_version: 3.9
     kafka_log4j_debug_migration: true
     kafka_home: /opt/kafka/kafka_2.13-3.9.2.redhat-00007
-
-# - name: Run cluster upgrade up to 3.2.0
-#   import_playbook: ../../playbooks/upgrade.yml
-#   vars:
-#     amqstreams_version: 3.2.0
-
-# Find metadata.version by release version
-# ./kafka-features.sh --bootstrap-controller machine1.example.redhat.com:9092 --command-config /opt/kafka/kafka_2.13-4.2.0.redhat-00012/config/admin.properties version-mapping --release-version 4.2 | grep "metadata.version"
-# metadata.version=29 (4.2)
-# upgrade metadata version
-# ./kafka-features.sh --bootstrap-controller machine1.example.redhat.com:9092 --command-config /opt/kafka/kafka_2.13-4.2.0.redhat-00012/config/admin.properties upgrade --feature metadata.version=29
-# to check current version
-# ./kafka-features.sh --bootstrap-controller machine1.example.redhat.com:9092 --command-config /opt/kafka/kafka_2.13-4.2.0.redhat-00012/config/admin.properties describe
