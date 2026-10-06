@@ -28,4 +28,3 @@ warn_list:
   - schema
 
 use_default_rules: true
-parseable: true
