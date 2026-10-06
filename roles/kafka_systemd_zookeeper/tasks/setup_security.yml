@@ -40,3 +40,4 @@
     - zookeeper_auth_type is defined 
     - zookeeper_auth_type in 'gssapi'
   become: true
+  notify: Restart zookeeper

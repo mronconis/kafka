@@ -1,6 +1,4 @@
 ---
-
-
 - name: Run cluster upgrade up to 2.7.0
   import_playbook: ../../playbooks/upgrade.yml
   vars:
@@ -63,8 +61,3 @@
     kafka_log4j_debug_migration: true
     kafka_home: /opt/kafka/kafka_2.13-3.9.2.redhat-00007
 
-# TODO: Fix group_vars before running following upgrade
-# - name: Run cluster upgrade up to 3.2.0
-#   import_playbook: ../../playbooks/upgrade.yml
-#   vars:
-#     amqstreams_version: 3.2.0

@@ -44,3 +44,7 @@ zookeeper_jaas_debug: false
 zookeeper_metrics_provider_enabled: false
 zookeeper_metrics_provider_class_name: org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider
 zookeeper_metrics_provider_http_port: 7000
+
+zookeeper_service_after:
+  - syslog.target
+  - network-online.target

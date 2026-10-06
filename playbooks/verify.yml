@@ -1,4 +1,23 @@
 ---
+- name: Discovery running kafka_home
+  hosts: all
+  tasks:
+    - name: Ensure kafka running
+      ansible.builtin.shell: >
+        jcmd | awk '/(server|broker)\.properties/ {print substr($3, 1, index($3, "/config") - 1)}'
+      register: kafka_running
+      when: not ansible_check_mode
+      become: true
+      changed_when: false
+
+    - name: Debug kafka running
+      ansible.builtin.debug:
+        msg: "Running kafka_home: {{ kafka_running.stdout }}"
+
+    - name: Set kafka_home from running instance
+      ansible.builtin.set_fact:
+        kafka_home: "{{ kafka_running.stdout }}"
+
 - name: Verify ZooKeeper quorum
   hosts: zookeeper
   tasks:
@@ -7,12 +26,12 @@
       block:
       - name: Check Zookeeper Service
         include_role:
-          name: kafka_systemd_zookeeper
+          name: saiello.kafka.kafka_systemd_zookeeper
           tasks_from: service_check.yml
 
       - name: Verify Zookeeper node
         include_role:
-          name: kafka_systemd_zookeeper
+          name: saiello.kafka.kafka_systemd_zookeeper
           tasks_from: verify.yml
 
 - name: Verify Kafka cluster
@@ -23,16 +42,16 @@
       block:
       - name: Kafka prereqs
         ansible.builtin.include_role:
-          name: kafka_systemd_broker
+          name: saiello.kafka.kafka_systemd_broker
           tasks_from: prereqs.yml
           public: true
 
       - name: Check Kafka Service
         include_role:
-          name: kafka_systemd_broker
+          name: saiello.kafka.kafka_systemd_broker
           tasks_from: service_check.yml
         
       - name: Verify Kafka topic/partition
         include_role:
-          name: kafka_systemd_broker
+          name: saiello.kafka.kafka_systemd_broker
           tasks_from: verify.yml

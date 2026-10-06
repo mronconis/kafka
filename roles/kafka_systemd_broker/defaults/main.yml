@@ -9,6 +9,10 @@ kafka_service_limit_no_file: 65536
 kafka_service_limit_nproc: 65536
 kafka_service_limit_mem_lock: infinity
 kafka_service_timeout_stop_sec: 300
+kafka_service_standard_output: journal
+kafka_service_after:
+  - syslog.target
+  - network-online.target
 
 kafka_max_heap: 1G
 kafka_min_heap: 1G
@@ -20,19 +24,20 @@ kafka_zookeeper_migration_enabled: false
 kafka_broker_servers_ansible_group: broker
 kafka_controller_servers_ansible_group: controller
 
-kafka_log4j_dir: /var/log/kafka
 kafka_log_dirs:
   - /var/data/kafka
 
-kafka_server_properties_template: server.properties.j2
-kafka_server_properties_file_name: server.properties
+kafka_server_properties_template: "{{ kafka_kraft_mode | ternary('kraft/' ~ kafka_kraft_role, 'server') }}.properties.j2"
+kafka_server_properties_file_name: "{{ kafka_kraft_mode | ternary(kafka_kraft_role, 'server') }}.properties"
 kafka_server_properties_file: "{{ kafka_home }}/config/{{ (kafka_kraft_mode and (not kafka_microversion_is_v4)) | ternary('kraft/', '') }}{{ kafka_server_properties_file_name }}"
 
+kafka_log4j_dir: /var/log/kafka
 kafka_log4j_properties_template: log4j.properties.j2
 kafka_log4j_properties_file_name: log4j.properties
 kafka_log4j_properties_file: "{{ kafka_home }}/config/{{ kafka_log4j_properties_file_name }}"
 kafka_log4j_root_logger_level: INFO
 kafka_log4j_debug_migration: false
+kafka_log4j_stdout_enabled: true
 
 kafka_skip_verify_listening: false
 kafka_skip_verify_under_replicated_partitions: false
@@ -81,7 +86,6 @@ kafka_metrics_config_file: "{{kafka_home }}/config/kafka-metrics.yaml"
 kafka_kraft_mode: false
 kafka_kraft_role: broker
 kafka_controller_listener_name: CONTROLLER
-#kafka_controller_listener_port: 9090
 kafka_skip_setup_storage: true
 
 kafka_microversion_is_v4: false
