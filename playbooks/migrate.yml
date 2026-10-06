@@ -14,13 +14,13 @@
 
     - name: Set Zookeeper Facts
       ansible.builtin.include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: set_zk_facts.yml
         public: true
     
     - name: Set Cluster ID
       ansible.builtin.include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: set_cluster_id.yml
         public: true
       when: kafka_cluster_id is undefined
@@ -83,7 +83,7 @@
 
     - name: Set Zookeeper Facts
       ansible.builtin.include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: set_zk_facts.yml
         public: true
   tasks:
@@ -155,14 +155,14 @@
 
     - name: Set Zookeeper Facts
       ansible.builtin.include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: set_zk_facts.yml
         public: true
       run_once: true
     
     - name: Set Cluster ID
       ansible.builtin.include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: set_cluster_id.yml
         public: true
       when: kafka_cluster_id is undefined
@@ -174,7 +174,7 @@
       
     - name: Stop broker
       ansible.builtin.include_role:
-        name: kafka_systemd_broker
+        name: saiello.kafka.kafka_systemd_broker
         tasks_from: service_stopped.yml
         public: true
 
@@ -185,6 +185,7 @@
         keys_to_remove:
           - inter.broker.protocol.version
           - control.plane.listener.name
+          - zookeeper.set.acl
       when: kafka_additional_conf is defined
 
   roles:
@@ -193,8 +194,6 @@
       vars:
         kafka_kraft_mode: true
         kafka_zookeeper_migration_enabled: false
-        kafka_server_properties_template: kraft/broker.properties.j2
-        kafka_server_properties_file_name: broker.properties
 
 # phase4: Finalize migration (controllers exit migration mode), after that you cannot roll back to ZooKeeper.
 # - Switch each controller out of migration mode
@@ -212,13 +211,13 @@
 
     - name: Set Zookeeper Facts
       ansible.builtin.include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: set_zk_facts.yml
         public: true
 
     - name: Set Cluster ID
       ansible.builtin.include_role:
-        name: kafka_systemd_zookeeper
+        name: saiello.kafka.kafka_systemd_zookeeper
         tasks_from: set_cluster_id.yml
         public: true
       when: kafka_cluster_id is undefined
