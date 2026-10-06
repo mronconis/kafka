@@ -48,7 +48,7 @@ scenario:
     - create
     - prepare
     - converge
-    - verify
+    - verify   
     - destroy
     
 provisioner:
@@ -147,22 +147,6 @@ provisioner:
         zookeeper_myid: 3
       localhost:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
-
-scenario:
-  test_sequence:
-    - dependency
-    # - lint
-    - cleanup
-    - destroy
-    - syntax
-    - create
-    - prepare
-    - converge
-    # - idempotence  <-- Omitted to skip idempotency check
-    # - side_effect
-    - verify
-    - cleanup
-    - destroy
 
 verifier:
   name: ansible
