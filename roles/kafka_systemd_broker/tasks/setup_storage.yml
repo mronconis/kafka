@@ -23,14 +23,16 @@
     
 - name: Set controllers facts
   ansible.builtin.set_fact:
-    __kafka_storage_format_opts: "{{ __kafka_storage_format_opts + ' --initial-controllers ' + (initial_controllers | join(',')) }}"
-  when: inventory_hostname in groups[kafka_controller_servers_ansible_group]
+    kafka_storage_format_opts: "{{ __kafka_storage_format_opts + ' --initial-controllers ' + (initial_controllers | join(',')) }}"
+  when:
+  - kafka_kraft_role == 'controller' 
+  - inventory_hostname in groups[kafka_controller_servers_ansible_group]
 
 - name: Set broker facts
   ansible.builtin.set_fact:
-    __kafka_storage_format_opts: "{{ __kafka_storage_format_opts + ' --no-initial-controllers' }}"
+    kafka_storage_format_opts: "{{ __kafka_storage_format_opts + ' --no-initial-controllers' }}"
   when: 
-  - inventory_hostname not in groups[kafka_controller_servers_ansible_group]
+  - kafka_kraft_role == 'broker'
   - inventory_hostname in groups[kafka_broker_servers_ansible_group]
 
 - name: Debug storage info command
@@ -51,11 +53,11 @@
 
 - name: Debug storage format command
   ansible.builtin.debug:
-    msg: "{{ __kafka_commands_storage }} {{ __kafka_storage_format_opts }}"
+    msg: "{{ __kafka_commands_storage }} {{ kafka_storage_format_opts }}"
   when: (not ansible_check_mode) and ('is not formatted' in result_info.stdout)
 
 - name: Run storage format
-  ansible.builtin.command: "{{ __kafka_commands_storage }} {{ __kafka_storage_format_opts }}"
+  ansible.builtin.command: "{{ __kafka_commands_storage }} {{ kafka_storage_format_opts }}"
   become: true
   become_user: "{{ kafka_user }}"
   register: result_format
