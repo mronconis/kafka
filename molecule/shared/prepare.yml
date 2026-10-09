@@ -11,6 +11,7 @@
           - iproute
           - less
           - krb5-workstation
+          - aardvark-dns
         state: present
 
     - name: Display Ansible version
