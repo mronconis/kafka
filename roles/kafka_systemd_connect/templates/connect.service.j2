@@ -1,0 +1,24 @@
+[Unit]
+Description=Apache Kafka Connect
+After={{ kafka_connect_service_after | join(' ') }}
+
+[Service]
+Type=simple
+
+User={{ kafka_user }}
+Group={{ kafka_group }}
+
+EnvironmentFile=-{{ kafka_connect_service_environment_file }}
+
+ExecStart={{ kafka_home }}/bin/connect-distributed.sh {{ kafka_connect_properties_file }}
+
+KillSignal=SIGTERM
+TimeoutStopSec={{ kafka_connect_service_timeout_stop_sec }}
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput={{ kafka_connect_service_standard_output | default('null', true) }}
+
+[Install]
+WantedBy=multi-user.target

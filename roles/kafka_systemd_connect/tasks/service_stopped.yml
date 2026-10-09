@@ -1,0 +1,12 @@
+---
+- name: Stop Kafka Connect
+  ansible.builtin.service:
+    name: "{{ kafka_connect_service_name }}"
+    state: stopped
+  become: true
+
+- name: Ensure Kafka Connect is stopped
+  ansible.builtin.shell: jcmd | grep -w "org.apache.kafka.connect.cli.ConnectDistributed"
+  register: kafka_check
+  changed_when: false
+  failed_when: kafka_check.rc == 0

@@ -49,3 +49,19 @@
     - saiello.kafka.kafka_install
     - role: saiello.kafka.kafka_systemd_broker
       when: kafka_kraft_role == 'broker'
+
+- name: Upgrade Kafka Connect
+  hosts: connect
+  serial: 1
+  tags: 
+    - connect
+  pre_tasks:
+    - name: Stop Kafka Connect Service
+      include_role:
+        name: saiello.kafka.kafka_systemd_connect
+        tasks_from: service_stopped.yml
+    - name: Run Handlers
+      ansible.builtin.meta: flush_handlers
+  roles:
+    - saiello.kafka.kafka_install
+    - saiello.kafka.kafka_systemd_connect

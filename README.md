@@ -23,6 +23,7 @@ Plugins and modules within a collection may be tested with only specific Ansible
 * [kafka_systemd_zookeeper](./roles/kafka_systemd_zookeeper/README.md): configure zookeeper systemd unit
 * [kafka_systemd_broker](./roles/kafka_systemd_broker/README.md): configure kafka broker systemd unit
 * [kafka_systemd_controller](./roles/kafka_systemd_controller/README.md): wraps the kafka_systemd_broker role for the controller
+* [kafka_systemd_connect](./roles/kafka_systemd_connect/README.md): configure kafka connect systemd unit
 * [cruise_control_install](./roles/cruise_control_install/README.md): download and install cruise control
 * [kafka_systemd_cruise_control](./roles/kafka_systemd_cruise_control/README.md): configure cruise control systemd
 

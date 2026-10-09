@@ -1,0 +1,12 @@
+---
+- name: Restart Kafka Connect
+  ansible.builtin.service:
+    name: "{{ kafka_connect_service_name }}"
+    state: restarted
+  when: not ansible_check_mode
+  become: true
+
+- name: Check Kafka Connect Service
+  ansible.builtin.include_tasks: service_check.yml
+  with_items: "{{ kafka_connect_listeners }}"
+  

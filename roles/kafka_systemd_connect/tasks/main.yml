@@ -1,0 +1,68 @@
+---
+- name: Ensures user exists
+  ansible.builtin.include_role:
+    name: kafka_install
+    tasks_from: user.yml
+    public: true
+
+- name: Create config dir for Kafka Connect
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: 0750
+  with_items:
+    - "{{ kafka_home }}/config"
+    - "{{ kafka_connect_log4j_dir }}"
+  become: true
+
+- name: Create systemd unit file
+  ansible.builtin.template:
+    src: connect.service.j2
+    dest: "{{ kafka_connect_service_file }}"
+    owner: root
+    group: root
+    mode: 0644
+    backup: "{{ kafka_connect_template_backup }}"
+  become: true
+  notify:
+    - Reload systemd kafka-connect
+    - Restart kafka-connect
+
+- name: Create environment configuration file
+  ansible.builtin.template:
+    src: connect.j2
+    dest: "{{ kafka_connect_service_environment_file }}"
+    mode: 0644
+    backup: "{{ kafka_connect_template_backup }}"
+  notify: Restart kafka-connect
+  become: true
+
+- name: Create connect-distributed.properties configuration file
+  ansible.builtin.template:
+    src: connect-distributed.properties.j2
+    dest: "{{ kafka_connect_properties_file }}"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: 0400
+    backup: "{{ kafka_connect_template_backup }}"
+  notify: Restart kafka-connect
+  become: true
+
+# ---------------------------
+# Enable Kafka Connect Service
+# ---------------------------
+- name: Enable kafka-connect
+  ansible.builtin.service:
+    name: "{{ kafka_connect_service_name }}"
+    enabled: true
+  when: not ansible_check_mode
+  become: true
+
+- name: Run Handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Setup Kafka Connectors
+  ansible.builtin.include_tasks: setup_connector.yml
+  with_items: "{{ kafka_connect_connectors }}"

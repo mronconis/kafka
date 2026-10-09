@@ -1,0 +1,6 @@
+---
+- name: Verify cluster status
+  import_playbook: ../../playbooks/verify.yml
+  vars:
+    kafka_skip_zookeeper_verify: true
+    kafka_skip_verify_produce_consume_data: false
