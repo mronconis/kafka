@@ -18,6 +18,8 @@ _controller_kafka_skip_verify_unavailable_partitions: true
 
 _controller_kafka_server_properties_template: 'kraft/controller.properties.j2'
 _controller_kafka_server_properties_file_name: 'controller.properties'
+_controller_kafka_server_properties_file: "{{ kafka_home }}/config/{{ (kafka_kraft_mode and (not kafka_microversion_is_v4)) | ternary('kraft/', '') }}{{ _controller_kafka_server_properties_file_name }}"
+
 _controller_kafka_jaas_config_file_name: 'kafka-controller-jaas.conf'
 
 _controller_kafka_service_name: 'kafka-controller'
