@@ -1,0 +1,5 @@
+- name: Verify Kafka Connect is listening
+  ansible.builtin.wait_for:
+    host: "{{ (item | urlsplit('hostname')) | default(inventory_hostname, true) }}"
+    port: "{{ item | urlsplit('port') }}"
+  when: not (ansible_check_mode or kafka_connect_skip_verify_listening)

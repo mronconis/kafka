@@ -40,3 +40,16 @@
   roles:
     - role: saiello.kafka.kafka_systemd_broker
       when: kafka_kraft_role == 'broker'
+
+- name: Update Kafka Connect
+  hosts: connect
+  serial: 1
+  tags: 
+    - connect
+  pre_tasks:
+    - name: "Ensure kafka_home exists"
+      ansible.builtin.assert:
+        that:
+          - kafka_home is defined
+  roles:
+    - saiello.kafka.kafka_systemd_connect

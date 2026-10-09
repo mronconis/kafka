@@ -26,3 +26,11 @@
     - saiello.kafka.kafka_install
     - role: saiello.kafka.kafka_systemd_broker
       when: kafka_kraft_role == 'broker'
+
+- name: Setup Kafka Connect
+  hosts: connect
+  tags: 
+    - connect
+  roles:
+    - saiello.kafka.kafka_install
+    - saiello.kafka.kafka_systemd_connect

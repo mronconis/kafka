@@ -1,0 +1,8 @@
+---
+- name: Reload systemd kafka-connect
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: Restart kafka-connect
+  ansible.builtin.include_tasks: service_restarted.yml

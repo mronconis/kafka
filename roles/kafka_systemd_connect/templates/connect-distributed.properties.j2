@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+
+listeners={{ kafka_connect_listeners | join(',') }}
+
+bootstrap.servers={{ kafka_connect_bootstrap_servers }}
+
+group.id={{ kafka_connect_group_id }}
+
+key.converter={{ kafka_connect_key_converter }}
+key.converter.schemas.enable={{ kafka_connect_key_converter_schemas_enable }}
+
+value.converter={{ kafka_connect_value_converter }}
+value.converter.schemas.enable={{ kafka_connect_value_converter_schemas_enable }}
+
+offset.storage.topic={{ kafka_connect_offset_storage_topic }}
+offset.storage.replication.factor={{ kafka_connect_offset_storage_replication_factor }}
+
+config.storage.topic={{ kafka_connect_config_storage_topic }}
+config.storage.replication.factor={{ kafka_connect_config_storage_replication_factor }}
+
+status.storage.topic={{ kafka_connect_status_storage_topic }}
+status.storage.replication.factor={{ kafka_connect_status_storage_replication_factor }}
+
+offset.flush.interval.ms={{ kafka_connect_offset_flush_int_ms }}
