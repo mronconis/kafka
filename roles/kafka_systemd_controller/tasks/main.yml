@@ -18,6 +18,7 @@
     kafka_skip_verify_unavailable_partitions: "{{ _controller_kafka_skip_verify_unavailable_partitions }}"
     kafka_server_properties_template: "{{ _controller_kafka_server_properties_template }}"
     kafka_server_properties_file_name: "{{ _controller_kafka_server_properties_file_name }}"
+    kafka_server_properties_file: "{{ _controller_kafka_server_properties_file }}"
     kafka_jaas_config_file_name: "{{ _controller_kafka_jaas_config_file_name }}"
     kafka_service_name: "{{ _controller_kafka_service_name }}"  
     kafka_service_after: "{{ _controller_kafka_service_after }}"
