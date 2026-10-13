@@ -6,6 +6,20 @@ bootstrap.servers={{ kafka_connect_bootstrap_servers }}
 
 group.id={{ kafka_connect_group_id }}
 
+{% if kafka_connect_security_protocol in ['SSL', 'SASL_SSL'] %}
+{% set prefixes = [''] + kafka_connect_prefix_configs %}
+{% for _prefix in prefixes %}
+{% set prefix = _prefix ~ '.' if _prefix else '' %}
+{{ prefix }}security.protocol={{ kafka_connect_security_protocol }}
+{{ prefix }}ssl.truststore.location={{ kafka_connect_tls_config.trustedCA.location }}
+{{ prefix }}ssl.truststore.type={{ kafka_connect_tls_config.trustedCA.type }}
+{{ prefix }}ssl.keystore.type={{ kafka_connect_tls_config.keystore.type }}
+{{ prefix }}ssl.keystore.location={{ kafka_connect_tls_config.keystore.location }}
+{{ prefix }}ssl.keystore.password={{ kafka_connect_tls_config.keystore.password }}
+
+{% endfor %}
+{% endif -%}
+
 key.converter={{ kafka_connect_key_converter }}
 key.converter.schemas.enable={{ kafka_connect_key_converter_schemas_enable }}
 
@@ -22,3 +36,9 @@ status.storage.topic={{ kafka_connect_status_storage_topic }}
 status.storage.replication.factor={{ kafka_connect_status_storage_replication_factor }}
 
 offset.flush.interval.ms={{ kafka_connect_offset_flush_int_ms }}
+
+{% for kafka_connect_conf_key, kafka_connect_conf_value in kafka_connect_additional_configs.items() %}
+{{ kafka_connect_conf_key }}={{ kafka_connect_conf_value }}
+{% endfor %}
+
+plugin.path={{ kafka_connect_plugin_paths | join(',') }}

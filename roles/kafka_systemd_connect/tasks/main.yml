@@ -17,6 +17,16 @@
     - "{{ kafka_connect_log4j_dir }}"
   become: true
 
+- name: Create plugins dir for Kafka Connect
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: 0750
+  with_items: "{{ kafka_connect_plugin_paths }}"
+  become: true
+  
 - name: Create systemd unit file
   ansible.builtin.template:
     src: connect.service.j2
@@ -50,6 +60,15 @@
   notify: Restart kafka-connect
   become: true
 
+- name: Setup connect plugins
+  ansible.builtin.include_tasks: setup_plugin.yml
+  loop: "{{ kafka_connect_plugins }}"
+  when: kafka_connect_plugins is defined
+
+- name: Setup security resources
+  ansible.builtin.include_tasks: setup_security.yml
+  when: kafka_connect_security_protocol != 'PLAINTEXT'
+
 # ---------------------------
 # Enable Kafka Connect Service
 # ---------------------------
@@ -65,4 +84,4 @@
 
 - name: Setup Kafka Connectors
   ansible.builtin.include_tasks: setup_connector.yml
-  with_items: "{{ kafka_connect_connectors }}"
+  run_once: true
