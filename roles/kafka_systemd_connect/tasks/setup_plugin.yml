@@ -1,0 +1,23 @@
+---
+- name: Ensure plugin file exist
+  ansible.builtin.stat:
+    path: "{{ item.src }}/{{ item.name }}"
+  register: stat_plugin_file
+
+- name: Fail if plugin file not found
+  ansible.builtin.fail:
+    msg: "Plugin file {{ item.name }} not found in {{ item.src }}"
+  when: not stat_plugin_file.stat.exists
+
+- name: Deploy plugin {{ item.name }} to {{ item.dest }}
+  ansible.builtin.copy:
+    src: "{{ item.src }}/{{ item.name }}"
+    dest: "{{ item.dest }}/{{ item.name }}"
+    remote_src: yes 
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0644'
+  when:
+  - item.action == 'copy'
+  - stat_plugin_file.stat.exists
+  notify: Restart kafka-connect
