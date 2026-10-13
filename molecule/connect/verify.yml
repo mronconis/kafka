@@ -1,6 +1,26 @@
 ---
-- name: Verify cluster status
-  import_playbook: ../../playbooks/verify.yml
-  vars:
-    kafka_skip_zookeeper_verify: true
-    kafka_skip_verify_produce_consume_data: false
+- name: Verifica endpoint Kafka Connect
+  hosts: connect
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Verifying Kafka Connect API Responsiveness
+      ansible.builtin.uri:
+        url: http://{{ inventory_hostname }}:8083
+        method: GET
+        return_content: true
+        status_code: 200
+      register: connect_response
+
+    - name: Debug Kafka Connect API status
+      ansible.builtin.debug:
+        msg: "Response OK! Content: {{ connect_response.json }}"
+
+    - name: Assert Kafka Connect API Response
+      ansible.builtin.assert:
+        that:
+          - connect_response.json.version == "4.2.1.redhat-00003"
+          - connect_response.json.commit == "6f44a337d1d1ec8a"
+          - connect_response.json.kafka_cluster_id == "YPfyovBeRWmvbFDAzikROA"
+        fail_msg: "The JSON of response does not match the expected one!"
