@@ -25,7 +25,7 @@ Plugins and modules within a collection may be tested with only specific Ansible
 * [kafka_systemd_controller](./roles/kafka_systemd_controller/README.md): wraps the kafka_systemd_broker role for the controller
 * [kafka_systemd_connect](./roles/kafka_systemd_connect/README.md): configure kafka connect systemd unit
 * [cruise_control_install](./roles/cruise_control_install/README.md): download and install cruise control
-* [kafka_systemd_cruise_control](./roles/kafka_systemd_cruise_control/README.md): configure cruise control systemd
+* [kafka_systemd_cruise_control](./roles/kafka_systemd_cruise_control/README.md): configure cruise control systemd unit
 
 ### Playbooks
 
@@ -33,7 +33,7 @@ Plugins and modules within a collection may be tested with only specific Ansible
 * [update.yml](./playbooks/update.yml): configure a cluster performing a safe rolling update
 * [verify.yml](./playbooks/verify.yml): perform some checks
 * [restart.yml](./playbooks/restart.yml): restart a cluster
-* [upgrade.yml](./playbooks/upgrade.yml): upgrade a cluster increasing the
+* [upgrade.yml](./playbooks/upgrade.yml): upgrade a cluster performing a safe rolling upgrade
 * [migrate.yml](./playbooks/migrate.yml): migrate Zookeeper-based Kafka cluster
 
 ### Installing the collection
