@@ -32,8 +32,7 @@ platforms:
     privileged: true
     command: "/usr/sbin/init"
     groups:
-      - controller
-      - broker
+      - connect
     network: molecule
     subnet: 10.0.1.0/16
     ip: 10.0.1.2
@@ -45,42 +44,17 @@ platforms:
     privileged: true
     command: "/usr/sbin/init"
     groups:
-      - controller
-      - broker
+      - connect
     network: molecule
     subnet: 10.0.1.0/16
     ip: 10.0.1.3
-
-  - name: machine4
-    hostname: machine4
-    image: registry.access.redhat.com/ubi9/ubi-init:latest
-    pre_build_image: true
-    privileged: true
-    command: "/usr/sbin/init"
-    groups:
-      - connect
-    network: molecule
-    subnet: 10.0.1.0/16
-    ip: 10.0.1.4
-
-  - name: machine5
-    hostname: machine5
-    image: registry.access.redhat.com/ubi9/ubi-init:latest
-    pre_build_image: true
-    privileged: true
-    command: "/usr/sbin/init"
-    groups:
-      - connect
-    network: molecule
-    subnet: 10.0.1.0/16
-    ip: 10.0.1.5
 
 provisioner:
   name: ansible
   env:
     ANSIBLE_COLLECTIONS_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.collections"
-  # ansible_args:
-  #   - --diff
+  ansible_args:
+    - --diff
   #   - -vvv
   playbooks:
     converge: converge.yml
@@ -94,7 +68,6 @@ provisioner:
         kafka_prereqs_setup_openjdk_package_name: java-21-openjdk
 
         kafka_advertised_host: "{{ ansible_hostname }}"
-        #kafka_advertised_interface_name: eth0
         
         # kraft mode
         kafka_kraft_mode: true
@@ -121,6 +94,7 @@ provisioner:
             - User:admin
 
       controller:
+    
         _controller_kafka_listeners:
 
           - name: CONTROLLER
@@ -129,6 +103,13 @@ provisioner:
             authentication:
               type: tls
         
+        _controller_kafka_authorization:
+          type: simple
+          deny_by_default: false
+          super_users:
+            - User:CN=kafka,O=Saiello,L=Rome,C=IT
+            - User:admin
+
         _controller_kafka_admin:
           listener_name: CONTROLLER
           authentication:
@@ -174,12 +155,12 @@ provisioner:
           num.partitions: 1
           log.retention.hours: 148
           auto.create.topics.enable: 'false'
-          min.insync.replicas: 2
-          default.replication.factor: 3
-          offsets.topic.replication.factor: 3
-          status.storage.replication.factor: 3
-          transaction.state.log.replication.factor: 3
-          transaction.state.log.min.isr: 2
+          min.insync.replicas: 1
+          default.replication.factor: 1
+          offsets.topic.replication.factor: 1
+          status.storage.replication.factor: 1
+          transaction.state.log.replication.factor: 1
+          transaction.state.log.min.isr: 1
 
         kafka_inter_broker_listener_name: REPLICATION
         
@@ -203,21 +184,43 @@ provisioner:
         kafka_server_properties_file_name: broker.properties
 
       connect:
-        kafka_connect_bootstrap_servers: machine1:9092,machine2:9092,machine3:9092
+        kafka_connect_bootstrap_servers: machine1:9093
+        kafka_connect_security_protocol: SSL
+
+        kafka_connect_tls_config:
+          trustedCA:
+            type: PEM
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/ca-root.pem"
+            location: "{{ kafka_home }}/security/ansible_kafka-ca.crt"
+          keystore:
+            file: "${MOLECULE_SCENARIO_DIRECTORY}/../shared/certs/cert-cluster.p12"
+            location: "{{ kafka_home }}/security/ansible_kafka-keystore.p12"
+            password: changeit
+            type: PKCS12
+        
+        kafka_connect_plugins:
+          - name: connect-file-4.2.1.redhat-00003.jar
+            action: copy
+            src: "{{ kafka_home }}/libs"
+            dest: /opt/kafka/plugins
+
+        kafka_connect_prefix_configs:
+          - consumer
+
+        kafka_connect_connectors:
+          - name: file-sink
+            state: present
+            config:
+              connector.class: "org.apache.kafka.connect.file.FileStreamSinkConnector"
+              tasks.max: 1
+              topics: "ansible-test-topic"
+              file: "/tmp/ansible-test-topic-output.txt"
 
     host_vars:
       machine1:
         kafka_controller_id: 1
-        kafka_broker_id: 4
+        kafka_broker_id: 2
         kafka_dir_id: 1IPhBz5sQEuxBCNR15oApA
-      machine2:
-        kafka_controller_id: 2
-        kafka_broker_id: 5
-        kafka_dir_id: ZuzSytQ3TxaD-nj3l3LY_A
-      machine3:
-        kafka_controller_id: 3
-        kafka_broker_id: 6
-        kafka_dir_id: AZN1GcFyT7GFUc9_vyVvLg
       localhost:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
 
