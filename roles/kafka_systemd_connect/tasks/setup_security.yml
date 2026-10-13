@@ -1,0 +1,56 @@
+---
+- name: Create security dir for Kafka
+  ansible.builtin.file:
+    path: "{{ kafka_home }}/security"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: 0755
+  become: true
+
+# - name: Copy jaas config file
+#   ansible.builtin.template:
+#     src: "templates/jaas.conf.j2"
+#     dest: "{{ kafka_jaas_config_file_location }}"
+#     owner: "{{ kafka_user }}"
+#     group: "{{ kafka_group }}"
+#     mode: 0400
+#   when: zookeeper_auth_type is defined
+#   become: true
+
+- name: Copy SSL resources
+  block:
+    - name: Copy java truststore file
+      ansible.builtin.copy:
+        src: "{{ kafka_connect_tls_config.trustedCA.file }}"
+        dest: "{{ kafka_connect_tls_config.trustedCA.location }}"
+        owner: "{{ kafka_user }}"
+        group: "{{ kafka_group }}"
+        mode: 0400
+
+    - name: Copy java keystore file
+      ansible.builtin.copy:
+        src: "{{ kafka_connect_tls_config.keystore.file }}"
+        dest: "{{ kafka_connect_tls_config.keystore.location }}"
+        owner: "{{ kafka_user }}"
+        group: "{{ kafka_group }}"
+        mode: 0400
+  when:
+    - kafka_connect_security_protocol in ['SSL','SASL_SSL']
+    - kafka_connect_tls_config is defined
+    - kafka_connect_tls_config.trustedCA is defined
+    - kafka_connect_tls_config.keystore is defined
+  become: true
+
+# - name: Copy kerberos keytab file
+#   ansible.builtin.copy:
+#       src: "{{ kafka_kerberos_keytab_file }}"
+#       dest: "{{ kafka_kerberos_keytab_location }}"
+#       owner: "{{ kafka_user }}"
+#       group: "{{ kafka_group }}"
+#       mode: 0400
+#   when:
+#     - not kafka_kerberos_keytab_skip_copy
+#     - item.value.authentication.type is defined
+#     - item.value.authentication.type in 'gssapi'
+#   become: true
