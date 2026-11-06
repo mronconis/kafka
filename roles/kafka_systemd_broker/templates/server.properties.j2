@@ -15,7 +15,11 @@ zookeeper.connect={{ kafka_zookeeper_connect_servers | join(',') }}
 # Enable Zookeeper to KRaft migration
 zookeeper.metadata.migration.enable=true
 controller.listener.names={{ kafka_controller_listener_name }}
+{% if kafka_kraft_quorum_static %}
+controller.quorum.voters={{ controller_quorum_voters | join(',') }}
+{% else %}
 controller.quorum.bootstrap.servers={{ controller_quorum_bootstrap_servers | join(',') }}
+{% endif %}
 {% endif %}
 
 {% for l_name, l_config in __kafka_config.listeners.items() %}

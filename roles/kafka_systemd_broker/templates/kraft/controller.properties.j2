@@ -20,7 +20,11 @@ zookeeper.connect={{ zookeeper_servers | map(attribute='address') | zip(zookeepe
 
 controller.listener.names={{ kafka_controller_listener_name }}
 
+{% if kafka_kraft_quorum_static %}
+controller.quorum.voters={{ controller_quorum_voters | join(',') }}
+{% else %}
 controller.quorum.bootstrap.servers={{ controller_quorum_bootstrap_servers | join(',') }}
+{% endif %}
 
 log.dirs={{ kafka_log_dirs | join(',') }}
 

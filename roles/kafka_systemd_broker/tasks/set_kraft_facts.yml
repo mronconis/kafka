@@ -7,6 +7,7 @@
 
 - name: Init KRaft controller facts
   ansible.builtin.set_fact:
+    controller_quorum_voters: []
     controller_quorum_bootstrap_servers: []
 
 - name: Assert existence of controller listener '{{ kafka_controller_listener_name }}'
@@ -21,12 +22,43 @@
   ansible.builtin.set_fact:
     kafka_controller_listener_port: "{{ (kafka_listeners | selectattr('name', 'eq', kafka_controller_listener_name) | map(attribute='port') | first) }}"
 
-- name: Set KRaft controller quorum facts
+- name: Set KRaft controller static quorum facts
   ansible.builtin.set_fact:
-    controller_quorum_bootstrap_servers: "{{ controller_quorum_bootstrap_servers + [ (hostvars[item]['_controller_kafka_advertised_host'] | default(hostvars[item]['kafka_advertised_host'])) + ':' + (kafka_controller_listener_port | string) ] }}"
-  with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
+    controller_quorum_voters: >-
+      {{
+        controller_quorum_voters + [
+          '%s@%s:%s' | format(
+            hostvars[item]['kafka_controller_id'],
+            hostvars[item]['_controller_kafka_advertised_host'] | default(hostvars[item]['kafka_advertised_host']),
+            kafka_controller_listener_port
+          )
+        ]
+      }}
+  loop: "{{ groups[kafka_controller_servers_ansible_group] }}"
   run_once: true
+  when: kafka_kraft_quorum_static | bool
 
-- name: Debug KRaft controller quorum
+- name: Set KRaft controller dynamic quorum facts
+  ansible.builtin.set_fact:
+    controller_quorum_bootstrap_servers: >-
+      {{
+        controller_quorum_bootstrap_servers + [
+          '%s:%s' | format(
+            hostvars[item]['_controller_kafka_advertised_host'] | default(hostvars[item]['kafka_advertised_host']),
+            kafka_controller_listener_port
+          )
+        ]
+      }}
+  loop: "{{ groups[kafka_controller_servers_ansible_group] }}"
+  run_once: true
+  when: not (kafka_kraft_quorum_static | bool)
+
+- name: Debug KRaft controller static quorum
+  ansible.builtin.debug:
+    var: controller_quorum_voters
+  when: kafka_kraft_quorum_static | bool
+
+- name: Debug KRaft controller dynamic quorum
   ansible.builtin.debug:
     var: controller_quorum_bootstrap_servers
+  when: not (kafka_kraft_quorum_static | bool)

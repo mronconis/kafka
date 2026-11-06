@@ -21,10 +21,12 @@
   with_items: "{{ groups[kafka_controller_servers_ansible_group] }}"
   run_once: true
     
-- name: Set controllers facts
+- name: Set initial-controllers for dynamic quorum facts
   ansible.builtin.set_fact:
     __kafka_storage_format_opts: "{{ __kafka_storage_format_opts + ' --initial-controllers ' + (initial_controllers | join(',')) }}"
-  when: inventory_hostname in groups[kafka_controller_servers_ansible_group]
+  when:
+    - not (kafka_kraft_quorum_static | bool) 
+    - inventory_hostname in groups[kafka_controller_servers_ansible_group]
 
 - name: Set broker facts
   ansible.builtin.set_fact:
