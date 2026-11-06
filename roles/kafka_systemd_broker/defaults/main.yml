@@ -85,6 +85,8 @@ kafka_metrics_config_file: "{{kafka_home }}/config/kafka-metrics.yaml"
 # KRAFT
 kafka_kraft_mode: false
 kafka_kraft_role: broker
+kafka_kraft_quorum_static: true
+
 kafka_controller_listener_name: CONTROLLER
 kafka_skip_setup_storage: true
 
