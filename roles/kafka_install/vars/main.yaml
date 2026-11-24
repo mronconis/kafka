@@ -51,6 +51,10 @@ kafka_versions:
 
 # amqstreams catalogue (manual download from: https://access.redhat.com/downloads/content/application-services/jboss.amq.streams/)
 amqstreams_versions:
+  3.2.2:
+    scala_version: 2.13
+    microversion: 4.2.2.redhat-00002
+    rhn_id: xxxxx
   3.2.1:
     scala_version: 2.13
     microversion: 4.2.1.redhat-00003
