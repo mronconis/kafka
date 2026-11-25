@@ -3,6 +3,7 @@
     name: saiello.kafka.kafka_systemd_broker
     tasks_from: "{{ tasks_from | default('main.yml') }}"
   vars:
+    amqstreams_java_home: "{{ _controller_amqstreams_java_home }}"
     kafka_advertised_interface_name: "{{ _controller_kafka_advertised_interface_name }}"
     kafka_advertised_host: "{{ _controller_kafka_advertised_host }}"
     kafka_inter_broker_listener_name: "{{ _controller_kafka_inter_broker_listener_name }}"
